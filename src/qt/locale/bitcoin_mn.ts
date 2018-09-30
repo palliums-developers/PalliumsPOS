@@ -321,6 +321,9 @@
     <name>QRImageWidget</name>
     </context>
 <context>
+    <name>QRImageWidget</name>
+    </context>
+<context>
     <name>RPCConsole</name>
     <message>
         <source>N/A</source>
@@ -412,6 +415,9 @@
         <source>Wallet</source>
         <translation>Түрүйвч</translation>
     </message>
+    </context>
+<context>
+    <name>RecentRequestsTableModel</name>
     </context>
 <context>
     <name>RecentRequestsTableModel</name>
