@@ -7,17 +7,27 @@
 #include <fs.h>
 #include <boost/thread.hpp>
 #include <uint256.h>
+#include <sync.h>
 
 void MintStart(boost::thread_group& threadGroup);
 
-//refdynamic_global_property_object
-class CDynamicWitnessProperty
+
+class CWitnessProperty
 {
 public:
-    static const uint8_t space_id = 0;
-    static const uint8_t type_id  = 0;
+//    CCriticalSection cs_wPro;
 
+public:
+    uint32_t HeadBlockNum(){
+//        LOCK(cs_wPro);
+        return headBlockNumber;
+    }
+
+public:
     uint32_t          headBlockNumber = 0;
+    /**
+     * @brief time is headblocktime since epoch
+     */
     uint64_t          time;
     uint160           currentWitness;
     uint64_t          nextMaintenanceTime;
@@ -65,6 +75,21 @@ public:
           */
         maintenanceFlag = 0x01
     };
+};
+
+class CWitnessObject
+{
+   public:
+      uint64_t         lastAbsoluteSlot = 0;
+      uint160          witnessPubkey;
+      uint64_t         totalMissed = 0;
+      uint32_t         lastConfirmedBlockNum = 0;
+};
+
+class CWitnessScheduleObject
+{
+   public:
+      std::vector<CWitnessObject> witnesses;
 };
 
 #endif // BITCOIN_WITNESS_H

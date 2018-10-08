@@ -8,25 +8,77 @@
 
 #define PRODUCE_NODE_COUNT 6
 
-int64_t block_interval=10;//10s
-int64_t new_round_begin_time=0;
+uint64_t block_interval=6;//6s
+uint64_t new_round_begin_time=0;
 bool round_generated=false;
 uint160 local_address;
 std::vector<uint160> witness_keys;
-std::shared_ptr<CDynamicWitnessProperty> dynGlobalPropperty(new CDynamicWitnessProperty());
+std::shared_ptr<CWitnessProperty> dynGlobalPropperty(new CWitnessProperty());
+
+uint32_t maintenance_skip_slots=3;
+
+using CSignedBlock = CBlock;
 
 namespace WitnessSchedule{
+
+uint160 GetScheduledWitness( uint32_t slot_num )
+{
+   uint64_t current_aslot = dynGlobalPropperty->currentAbsoluteSlot + slot_num;
+   return witness_keys[ current_aslot % witness_keys.size()];
+}
+
+
 //second
-int64_t GetSlotTime(int8_t slot_num)
+uint64_t GetSlotTime(uint8_t slot_num)
 {
     if( slot_num == 0 )
        return 0;
     auto interval = block_interval;
-    const CDynamicWitnessProperty& dpo =*dynGlobalPropperty;
+    CWitnessProperty& dpo =*dynGlobalPropperty;
+    if( dpo.HeadBlockNum() == 0 )
+    {
+       // n.b. first block is at genesis_time plus one block interval
+        uint64_t genesis_time=dpo.time;
+        return genesis_time + slot_num * interval;
+    }
 
+    //time takes an integer
+    uint64_t head_block_abs_slot = dpo.time / interval;
+    uint64_t head_slot_time=head_block_abs_slot*interval;
+
+    if( dpo.dynamicFlags & CWitnessProperty::maintenanceFlag )
+        slot_num += maintenance_skip_slots;
+
+    // "slot 0" is head_slot_time
+    // "slot 1" is head_slot_time,
+    //   plus maint interval if head block is a maint block
+    //   plus block interval if head block is not a maint block
+    return head_slot_time + (slot_num * interval);
 }
 
-int8_t GetSlotByTime(int64_t){
+uint8_t GetSlotAtTime(uint64_t when)
+{
+    uint64_t first_slot_time = GetSlotTime( 1 );
+    if( when < first_slot_time )
+        return 0;
+    return (when - first_slot_time) / block_interval + 1;
+}
+
+uint32_t UpdateWitnessMissedBlocks( const CSignedBlock& b )
+{
+    uint32_t missed_blocks = GetSlotAtTime(b.GetBlockHeader().GetBlockTime());
+    assert( missed_blocks != 0);
+    missed_blocks--;
+    if(missed_blocks<witness_keys.size())
+    {
+        for( uint32_t i = 0; i < missed_blocks; ++i ) {
+           const auto& witness_missed = GetScheduledWitness( i+1 );
+           modify( witness_missed, []( witness_object& w ) {
+              w.total_missed++;
+           });
+        }
+    }
+
     return 0;
 }
 
@@ -45,7 +97,7 @@ void NewChainBanner()
       "*                              *\n"
       "********************************\n"
       "\n";
-   if( WitnessSchedule::GetSlotByTime(GetTime()) > 200 )
+   if( WitnessSchedule::GetSlotAtTime(GetTime()) > 200 )
    {
       std::cerr << "Your genesis seems to have an old timestamp\n"
          "Please consider using the --genesis-timestamp option to give your genesis a recent timestamp\n"
