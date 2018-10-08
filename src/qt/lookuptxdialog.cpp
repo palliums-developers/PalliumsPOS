@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "lookuptxdialog.h"
-#include "ui_lookuptxdialog.h"
+#include "qt/forms/ui_lookuptxdialog.h"
 
 #include "omnicore/errors.h"
 #include "omnicore/rpc.h"

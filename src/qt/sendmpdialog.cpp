@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "sendmpdialog.h"
-#include "ui_sendmpdialog.h"
+#include "qt/forms/ui_sendmpdialog.h"
 
 #include "omnicore_qtutils.h"
 
@@ -25,9 +25,10 @@
 
 #include "amount.h"
 #include "base58.h"
-#include "main.h"
+#include "validation.h"
 #include "sync.h"
 #include "uint256.h"
+#include "key_io.h"
 #include "wallet/wallet.h"
 
 #include <stdint.h>
@@ -230,9 +231,9 @@ void SendMPDialog::sendMPTransaction()
     string strFromAddress = ui->sendFromComboBox->currentText().toStdString();
 
     // push recipient address into a CBitcoinAddress type and check validity
-    CBitcoinAddress fromAddress;
-    if (false == strFromAddress.empty()) { fromAddress.SetString(strFromAddress); }
-    if (!fromAddress.IsValid()) {
+    CTxDestination dest;
+    if (false == strFromAddress.empty()) { dest = DecodeDestination(strFromAddress); }
+    if (!IsValidDestination(dest)) {
         QMessageBox::critical( this, "Unable to send transaction",
         "The sender address selected is not valid.\n\nPlease double-check the transction details thoroughly before retrying your send transaction." );
         return;
@@ -241,9 +242,9 @@ void SendMPDialog::sendMPTransaction()
     // obtain the entered recipient address
     string strRefAddress = ui->sendToLineEdit->text().toStdString();
     // push recipient address into a CBitcoinAddress type and check validity
-    CBitcoinAddress refAddress;
-    if (false == strRefAddress.empty()) { refAddress.SetString(strRefAddress); }
-    if (!refAddress.IsValid()) {
+    CTxDestination dest2;
+    if (false == strRefAddress.empty()) { dest2 = DecodeDestination(strRefAddress); }
+    if (!IsValidDestination(dest2)) {
         QMessageBox::critical( this, "Unable to send transaction",
         "The recipient address entered is not valid.\n\nPlease double-check the transction details thoroughly before retrying your send transaction." );
         return;
@@ -280,7 +281,7 @@ void SendMPDialog::sendMPTransaction()
     }
 
     // check if sending address has enough funds
-    int64_t balanceAvailable = GetAvailableTokenBalance(fromAddress.ToString(), propertyId); //getMPbalance(fromAddress.ToString(), propertyId, MONEY);
+    int64_t balanceAvailable = GetAvailableTokenBalance(EncodeDestination(dest), propertyId); //getMPbalance(fromAddress.ToString(), propertyId, MONEY);
     if (sendAmount>balanceAvailable) {
         QMessageBox::critical( this, "Unable to send transaction",
         "The selected sending address does not have a sufficient balance to cover the amount entered.\n\nPlease double-check the transction details thoroughly before retrying your send transaction." );
@@ -303,7 +304,7 @@ void SendMPDialog::sendMPTransaction()
     string propDetails = getPropertyName(propertyId).c_str();
     string spNum = strprintf("%d", propertyId);
     propDetails += " (#" + spNum + ")";
-    strMsgText += "From: " + fromAddress.ToString() + "\nTo: " + refAddress.ToString() + "\nProperty: " + propDetails + "\nAmount that will be sent: ";
+    strMsgText += "From: " + EncodeDestination(dest) + "\nTo: " + EncodeDestination(dest2) + "\nProperty: " + propDetails + "\nAmount that will be sent: ";
     if (divisible) { strMsgText += FormatDivisibleMP(sendAmount); } else { strMsgText += FormatIndivisibleMP(sendAmount); }
     strMsgText += "\n\nAre you sure you wish to send this transaction?";
     QString msgText = QString::fromStdString(strMsgText);
@@ -329,7 +330,7 @@ void SendMPDialog::sendMPTransaction()
     // request the wallet build the transaction (and if needed commit it) - note UI does not support added reference amounts currently
     uint256 txid;
     std::string rawHex;
-    int result = WalletTxBuilder(fromAddress.ToString(), refAddress.ToString(), "", 0, payload, txid, rawHex, autoCommit);
+    int result = WalletTxBuilder(EncodeDestination(dest), EncodeDestination(dest2), "", 0, payload, txid, rawHex, autoCommit);
 
     // check error and return the txid (or raw hex depending on autocommit)
     if (result != 0) {
@@ -340,7 +341,7 @@ void SendMPDialog::sendMPTransaction()
         if (!autoCommit) {
             PopulateSimpleDialog(rawHex, "Raw Hex (auto commit is disabled)", "Raw transaction hex");
         } else {
-            PendingAdd(txid, fromAddress.ToString(), MSC_TYPE_SIMPLE_SEND, propertyId, sendAmount);
+            PendingAdd(txid, EncodeDestination(dest), MSC_TYPE_SIMPLE_SEND, propertyId, sendAmount);
             PopulateTXSentDialog(txid.GetHex());
         }
     }

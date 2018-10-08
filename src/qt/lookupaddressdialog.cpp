@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "lookupaddressdialog.h"
-#include "ui_lookupaddressdialog.h"
+#include "qt/forms/ui_lookupaddressdialog.h"
 
 #include "guiutil.h"
 
@@ -12,6 +12,7 @@
 #include "omnicore/walletutils.h"
 
 #include "base58.h"
+#include "key_io.h"
 
 #include <stdint.h>
 #include <sstream>
@@ -145,9 +146,9 @@ void LookupAddressDialog::searchAddress()
     if (searchText.empty()) return;
 
     // lets see if the string is a valid bitcoin address
-    CBitcoinAddress address;
-    address.SetString(searchText); // no null check on searchText required we've already checked it's not empty above
-    if (address.IsValid()) //do what?
+    CTxDestination dest;
+    dest = DecodeDestination(searchText); // no null check on searchText required we've already checked it's not empty above
+    if (IsValidDestination(dest)) //do what?
     {
         // update top fields
         ui->addressLabel->setText(QString::fromStdString(searchText));

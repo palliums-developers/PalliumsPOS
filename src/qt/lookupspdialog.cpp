@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "lookupspdialog.h"
-#include "ui_lookupspdialog.h"
+#include "qt/forms/ui_lookupspdialog.h"
 
 #include "guiutil.h"
 
@@ -12,6 +12,7 @@
 #include "omnicore/sp.h"
 
 #include "base58.h"
+#include "key_io.h"
 
 #include <boost/lexical_cast.hpp>
 
@@ -90,9 +91,9 @@ void LookupSPDialog::searchSP()
     // next if not positive numerical, lets see if the string is a valid bitcoin address for issuer search
     if (searchParamType == 0)
     {
-        CBitcoinAddress address;
-        address.SetString(searchText); // no null check on searchText required we've already checked it's not empty above
-        if (address.IsValid()) searchParamType = 2; // search by address;
+        CTxDestination dest;
+        dest = DecodeDestination(searchText); // no null check on searchText required we've already checked it's not empty above
+        if (IsValidDestination(dest)) searchParamType = 2; // search by address;
     }
 
     // next if we have a "*" only, we'll assume the user wants to request all properties
