@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "metadexcanceldialog.h"
-#include "ui_metadexcanceldialog.h"
+#include "qt/forms/ui_metadexcanceldialog.h"
 
 #include "omnicore_qtutils.h"
 

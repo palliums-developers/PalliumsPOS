@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "txhistorydialog.h"
-#include "ui_txhistorydialog.h"
+#include "qt/forms/ui_txhistorydialog.h"
 
 #include "omnicore_qtutils.h"
 
@@ -28,7 +28,8 @@
 #include "omnicore/walletutils.h"
 
 #include "init.h"
-#include "main.h"
+#include "validation.h"
+#include "chainparams.h"
 #include "primitives/transaction.h"
 #include "sync.h"
 #include "txdb.h"
@@ -192,7 +193,7 @@ int TXHistoryDialog::PopulateHistoryMap()
     int64_t nProcessed = 0; // counter for how many transactions we've added to history this time
 
     // obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending) - default last 65535
-    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(GetArg("-omniuiwalletscope", 65535L));
+    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(gArgs.GetArg("-omniuiwalletscope", 65535L));
 
     // reverse iterate over (now ordered) transactions and populate history map for each one
     for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++) {
@@ -221,7 +222,7 @@ int TXHistoryDialog::PopulateHistoryMap()
             ui->txHistoryTable->setSortingEnabled(true); // re-enable sorting
         }
 
-        CTransaction wtx;
+        CTransactionRef wtx;
         uint256 blockHash;
         if (!GetTransaction(txHash, wtx, Params().GetConsensus(), blockHash, true)) continue;
         if (blockHash.IsNull() || NULL == GetBlockIndex(blockHash)) {
@@ -252,7 +253,7 @@ int TXHistoryDialog::PopulateHistoryMap()
         if (NULL == pBlockIndex) continue;
         int blockHeight = pBlockIndex->nHeight;
         CMPTransaction mp_obj;
-        int parseRC = ParseTransaction(wtx, blockHeight, 0, mp_obj);
+        int parseRC = ParseTransaction(*wtx, blockHeight, 0, mp_obj);
         HistoryTXObject htxo;
         if (it->first.length() == 16) {
             htxo.blockHeight = atoi(it->first.substr(0,6));
