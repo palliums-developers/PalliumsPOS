@@ -358,7 +358,8 @@ int CreateFundedTransaction(
     CValidationState state;
 
 	CTransactionRef txrf = std::make_shared<CTransaction>(tx);
-    if (!AcceptToMemoryPool(mempool, state, txrf, false, NULL, false, DEFAULT_TRANSACTION_MAXFEE)) {
+    bool bVal = false;
+    if (!AcceptToMemoryPool(mempool, state, txrf, &bVal, NULL, false, DEFAULT_TRANSACTION_MAXFEE)) {
         PrintToLog("%s: ERROR: failed to broadcast transaction: %s\n", __func__, state.GetRejectReason());
         return MP_ERR_COMMIT_TX;
     }
