@@ -1,3 +1,3 @@
-! /bin/sh -
+#!/bin/bash
 cd ..
-./src/bitcoind -regtest -txindex=1                                         
+./src/bitcoind -regtest -txindex=1   
