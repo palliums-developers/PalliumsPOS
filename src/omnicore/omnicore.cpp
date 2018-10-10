@@ -821,7 +821,18 @@ static bool FillTxInputCache(const CTransaction& tx, int Height)
         view.Flush();
     }
 
-    AddCoins(view, tx, Height);	
+    for(std::vector<CTxIn>::const_iterator it = tx.vin.begin(); it != tx.vin.end(); ++it) {
+        const CTxIn & txIn = *it;
+        Coin coin;
+        if(!view.HaveCoinInCache(txIn.prevout)) {
+            CTransactionRef txPrev;
+            uint256 hashBlock;
+            //if(!GetTransaction(txIn.prevout.hash, txPrev, Params().GetConsensus(), hashBlock, true)) {
+                return false;
+           // }
+            AddCoins(view, *txPrev, Height);
+        }
+    }
     return true;
 }
 
@@ -861,6 +872,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
         return -101;
     }
 
+    printf("%s() wtx: %s\n", __func__, wtx.GetHash().GetHex().c_str());
     assert(view.HaveInputs(wtx));
 
     if (omniClass != OMNI_CLASS_C)
@@ -1166,7 +1178,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
 
                 if (msc_debug_parser_data) {
                     CPubKey key(ParseHex(multisig_script_data[k]));
-                    CKeyID keyID = key.GetID();
+                    //CKeyID keyID = key.GetID();
 					//jg checking...
                     std::string strAddress = EncodeDestination(GetDestinationForKey(key, OutputType::P2SH_SEGWIT));
                     PrintToLog("multisig_data[%d]:%s: %s\n", k, multisig_script_data[k], strAddress);
