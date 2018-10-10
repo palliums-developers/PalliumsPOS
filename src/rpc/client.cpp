@@ -268,6 +268,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "omni_createpayload_dexaccept", 0, "propertyid" },
     { "omni_createpayload_sto", 0, "propertyid" },
     { "omni_createpayload_sto", 2, "distributionproperty" },
+    { "omni_createpayload_issuancefixed", 0, "ecosystem" },
     { "omni_createpayload_issuancefixed", 1, "type" },
     { "omni_createpayload_issuancefixed", 2, "previousid" },
     { "omni_createpayload_issuancemanaged", 0, "ecosystem" },
