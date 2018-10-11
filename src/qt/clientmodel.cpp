@@ -37,7 +37,9 @@ ClientModel::ClientModel(interfaces::Node& node, OptionsModel *_optionsModel, QO
     optionsModel(_optionsModel),
     peerTableModel(0),
     banTableModel(0),
-    pollTimer(0)
+    pollTimer(0),
+    lockedOmniStateChanged(false),
+    lockedOmniBalanceChanged(false)
 {
     cachedBestHeaderHeight = -1;
     cachedBestHeaderTime = -1;
@@ -115,6 +117,50 @@ void ClientModel::updateNetworkActive(bool networkActive)
     Q_EMIT networkActiveChanged(networkActive);
 }
 
+void ClientModel::invalidateOmniState()
+{
+    Q_EMIT reinitOmniState();
+}
+
+void ClientModel::updateOmniState()
+{
+    lockedOmniStateChanged = false;
+    Q_EMIT refreshOmniState();
+}
+
+bool ClientModel::tryLockOmniStateChanged()
+{
+    // Try to avoid Omni queuing too many messages for the UI
+    if (lockedOmniStateChanged) {
+        return false;
+    }
+
+    lockedOmniStateChanged = true;
+    return true;
+}
+
+void ClientModel::updateOmniBalance()
+{
+    lockedOmniBalanceChanged = false;
+    Q_EMIT refreshOmniBalance();
+}
+
+bool ClientModel::tryLockOmniBalanceChanged()
+{
+    // Try to avoid Omni queuing too many messages for the UI
+    if (lockedOmniBalanceChanged) {
+        return false;
+    }
+
+    lockedOmniBalanceChanged = true;
+    return true;
+}
+
+void ClientModel::updateOmniPending(bool pending)
+{
+    Q_EMIT refreshOmniPending(pending);
+}
+
 void ClientModel::updateAlert()
 {
     Q_EMIT alertsChanged(getStatusBarWarnings());
@@ -182,7 +228,35 @@ void ClientModel::updateBanlist()
     banTableModel->refresh();
 }
 
-// Handlers for core signals
+ // Handlers for core signals
+static void OmniStateInvalidated(ClientModel *clientmodel)
+{
+    // This will be triggered if a reorg invalidates the state
+    QMetaObject::invokeMethod(clientmodel, "invalidateOmniState", Qt::QueuedConnection);
+}
+
+static void OmniStateChanged(ClientModel *clientmodel)
+{
+    // This will be triggered for each block that contains Omni layer transactions
+    if (clientmodel->tryLockOmniStateChanged()) {
+        QMetaObject::invokeMethod(clientmodel, "updateOmniState", Qt::QueuedConnection);
+    }
+}
+
+static void OmniBalanceChanged(ClientModel *clientmodel)
+{
+    // Triggered when a balance for a wallet address changes
+    if (clientmodel->tryLockOmniBalanceChanged()) {
+        QMetaObject::invokeMethod(clientmodel, "updateOmniBalance", Qt::QueuedConnection);
+    }
+}
+
+static void OmniPendingChanged(ClientModel *clientmodel, bool pending)
+{
+    // Triggered when Omni pending map adds/removes transactions
+    QMetaObject::invokeMethod(clientmodel, "updateOmniPending", Qt::QueuedConnection, Q_ARG(bool, pending));
+}
+
 static void ShowProgress(ClientModel *clientmodel, const std::string &title, int nProgress)
 {
     // emits signal "showProgress"
@@ -254,6 +328,11 @@ void ClientModel::subscribeToCoreSignals()
     m_handler_banned_list_changed = m_node.handleBannedListChanged(boost::bind(BannedListChanged, this));
     m_handler_notify_block_tip = m_node.handleNotifyBlockTip(boost::bind(BlockTipChanged, this, _1, _2, _3, _4, false));
     m_handler_notify_header_tip = m_node.handleNotifyHeaderTip(boost::bind(BlockTipChanged, this, _1, _2, _3, _4, true));
+    // Connect Omni signals
+    m_handler_omni_state_changed = m_node.handleOmniStateChanged(boost::bind(OmniStateChanged, this));
+    m_handler_omni_pending_changed = m_node.handleOmniPendingChanged(boost::bind(OmniPendingChanged, this, _1));
+    m_handler_omni_balance_changed = m_node.handleOmniBalanceChanged(boost::bind(OmniBalanceChanged, this));
+    m_handler_omni_state_invalidated = m_node.handleOmniStateInvalidated(boost::bind(OmniStateInvalidated, this));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
@@ -266,6 +345,11 @@ void ClientModel::unsubscribeFromCoreSignals()
     m_handler_banned_list_changed->disconnect();
     m_handler_notify_block_tip->disconnect();
     m_handler_notify_header_tip->disconnect();
+
+    m_handler_omni_state_changed->disconnect();
+    m_handler_omni_pending_changed->disconnect();
+    m_handler_omni_balance_changed->disconnect();
+    m_handler_omni_state_invalidated->disconnect();
 }
 
 bool ClientModel::getProxyInfo(std::string& ip_port) const
