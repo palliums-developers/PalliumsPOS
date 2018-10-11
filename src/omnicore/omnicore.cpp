@@ -827,9 +827,9 @@ static bool FillTxInputCache(const CTransaction& tx, int Height)
         if(!view.HaveCoinInCache(txIn.prevout)) {
             CTransactionRef txPrev;
             uint256 hashBlock;
-            //if(!GetTransaction(txIn.prevout.hash, txPrev, Params().GetConsensus(), hashBlock, true)) {
+            if(!GetTransaction(txIn.prevout.hash, txPrev, Params().GetConsensus(), hashBlock, true)) {
                 return false;
-           // }
+            }
             AddCoins(view, *txPrev, Height);
         }
     }
