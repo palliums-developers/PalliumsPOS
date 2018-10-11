@@ -36,6 +36,8 @@
 
 #include <walletinitinterface.h>
 
+#include "omnicore/utilsui.h"
+
 #include <memory>
 #include <stdint.h>
 
@@ -556,6 +558,9 @@ static void SetupUIArgs()
 int main(int argc, char *argv[])
 {
     SetupEnvironment();
+
+    // Indicate UI mode
+    fQtMode = true;
 
     std::unique_ptr<interfaces::Node> node = interfaces::MakeNode();
 
