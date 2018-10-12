@@ -8,6 +8,11 @@
 #include <boost/thread.hpp>
 #include <uint256.h>
 #include <sync.h>
+#include <chain.h>
+
+extern CCriticalSection cs_main;
+/** Best header we've seen so far (used for getheaders queries' starting points). */
+extern CBlockIndex *pindexBestHeader;
 
 void MintStart(boost::thread_group& threadGroup);
 
@@ -16,11 +21,24 @@ class CWitnessProperty
 {
 public:
 //    CCriticalSection cs_wPro;
+    CWitnessProperty(){
+        time = 1539140632;
+        dynamicFlags=0;
+        witnessBudget=0;
+//        recentSlotsFilled=std::numeric_limits<uint128_t>::max();
+    }
 
 public:
     uint32_t HeadBlockNum(){
-//        LOCK(cs_wPro);
         return headBlockNumber;
+    }
+
+    void UpdateBestBlockHeader(CBlockIndex *pBlockHeader)
+    {
+        LOCK(cs_main);
+        pindexBestHeader=pBlockHeader;
+        headBlockNumber=pindexBestHeader->nHeight+1;
+        time=pindexBestHeader->GetBlockTime();
     }
 
 public:
@@ -28,7 +46,7 @@ public:
     /**
      * @brief time is headblocktime since epoch
      */
-    uint64_t          time;
+    uint64_t          time = 1539140632;
     uint160           currentWitness;
     uint64_t          nextMaintenanceTime;
     uint64_t          lastBudgetTime;
@@ -55,7 +73,7 @@ public:
     /**
        * used to compute witness participation.
        */
-    uint160 recentSlotsFilled;
+//    uint128_t          recentSlotsFilled;
 
     /**
        * dynamicFlags specifies chain state properties that can be
@@ -75,6 +93,8 @@ public:
           */
         maintenanceFlag = 0x01
     };
+
+    CBlockIndex *pindexBestHeader;
 };
 
 class CWitnessObject

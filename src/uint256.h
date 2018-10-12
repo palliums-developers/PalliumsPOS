@@ -14,6 +14,7 @@
 #include <vector>
 #include <crypto/common.h>
 
+
 /** Template base class for fixed-sized opaque blobs. */
 template<unsigned int BITS>
 class base_blob
@@ -155,5 +156,6 @@ inline uint256 uint256S(const std::string& str)
     rv.SetHex(str);
     return rv;
 }
+
 
 #endif // BITCOIN_UINT256_H
