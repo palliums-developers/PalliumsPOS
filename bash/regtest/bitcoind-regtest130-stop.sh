@@ -12,8 +12,8 @@ echo "stop bitcoind " $target
 echo "bitcoin-cli path " $bitcoincli_path
 cd $bitcoincli_path
 
-echo ./bitcoin-cli -regtest -rpcport=18404 -rpcconnect=$node3 -datadir=${datadir_path} stop
-./bitcoin-cli -regtest -rpcport=18404 -rpcconnect=$node3 -datadir=${datadir_path} stop
+echo ./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node3 -datadir=${datadir_path} stop
+./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node3 -datadir=${datadir_path} stop
 
 
 cd -
