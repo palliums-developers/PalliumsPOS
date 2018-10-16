@@ -12,8 +12,8 @@ echo "cmd bitcoin-cli " $target
 echo "bitcoin-cli path " $bitcoincli_path
 cd $bitcoincli_path
 
-echo ./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node2 -datadir=${datadir_path} ${BITCOINCLI_CMDS} $*
-./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node2 -datadir=${datadir_path} ${BITCOINCLI_CMS} $*
+echo ./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node2 -datadir=${datadir_path} ${BITCOINCLI_CMDS} "$@"
+./bitcoin-cli -regtest -rpcport=$BITCOIND_RPCPORT -rpcconnect=$node2 -datadir=${datadir_path} ${BITCOINCLI_CMS} "$@"
 
 
 cd -
