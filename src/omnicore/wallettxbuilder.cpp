@@ -137,7 +137,7 @@ int WalletTxBuilder(
 		mapValue_t mapValue;
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s: %s; nFeeRet = %d\n", __func__, txNew->ToString(), nFeeRet);
-        if (!pwalletMain->CommitTransaction(txNew, mapValue, std::move(vOrderForm), senderAddress,  reserveKey, g_connman.get(), state)) return MP_ERR_COMMIT_TX;
+        if (!pwalletMain->CommitTransaction(txNew, mapValue, std::move(vOrderForm), {},  reserveKey, g_connman.get(), state)) return MP_ERR_COMMIT_TX;
         retTxid = txNew->GetHash();
         return 0;
     }

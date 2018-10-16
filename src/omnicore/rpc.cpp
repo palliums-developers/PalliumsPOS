@@ -1051,6 +1051,7 @@ UniValue omni_getwalletbalances(const JSONRPCRequest& request)
 
 UniValue omni_getwalletaddressbalances(const JSONRPCRequest& request)
 {
+	LoadWalletMain(request);
     const UniValue &params = request.params;
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(

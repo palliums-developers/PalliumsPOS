@@ -3,6 +3,7 @@
 #include "chainparamsbase.h"
 #include "util.h"
 #include "utiltime.h"
+#include "logging.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -150,8 +151,8 @@ static std::string GetTimestamp()
  */
 int LogFilePrint(const std::string& str)
 {
+	LogPrintf(str.c_str());
 
-	//LogPrintf(BCLog::OMNI, str);
 	return 0;
 }
 
@@ -166,9 +167,8 @@ int LogFilePrint(const std::string& str)
  */
 int ConsolePrint(const std::string& str)
 {
-    int ret = 0; // Number of characters written
-    return ret;
-	
+    LogPrintf(str.c_str());
+    return 0;
 }
 
 /**
