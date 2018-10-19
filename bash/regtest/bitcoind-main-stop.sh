@@ -55,8 +55,8 @@ logshow "stop bitcoind " $target
 logshow "bitcoin-cli path: " $bitcoind_path
 cd $bitcoind_path
 
-logshow "command : " ./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} stop $bitcoin_arg
-./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} stop $bitcoin_arg
+logshow "command : " ./bitcoin-cli  -rpcport=$BITCOIND_RPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} stop $bitcoin_arg
+./bitcoin-cli -rpcport=$BITCOIND_RPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} stop $bitcoin_arg
 
 
 

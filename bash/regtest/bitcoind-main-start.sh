@@ -50,6 +50,7 @@ fi
 if [ ! -e "${datadir_path}" ] ; then 
     mkdir -v $datadir_path
 fi
+
 logshow "target addr : "${target_addr}
 logshow "target rpc addr : "${target_rpcaddr}
 logshow $datadir_path
@@ -60,8 +61,8 @@ logshow "bitcoind path " $bitcoind_path
 
 cd $bitcoind_path
 
-logshow ./bitcoind -regtest -port=$BITCOIND_REGPORT -rpcport=$BITCOIND_REGRPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_REGCMDS} ${bitcoin_arg}
-./bitcoind -regtest -port=$BITCOIND_REGPORT -rpcport=$BITCOIND_REGRPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_REGCMDS}  ${bitcoin_arg}
+logshow ./bitcoind -port=$BITCOIND_PORT -rpcport=$BITCOIND_RPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_CMDS} ${bitcoin_arg}
+./bitcoind  -port=$BITCOIND_PORT -rpcport=$BITCOIND_RPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_CMDS}  ${bitcoin_arg}
 
 
 cd -
