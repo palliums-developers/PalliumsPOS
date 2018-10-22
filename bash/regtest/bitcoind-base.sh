@@ -1,13 +1,16 @@
-#!/bin/bash
+#! /bin/bash
 #addnode list
 source ./hosts
+source ./help.sh
+source ./log.sh
+
 #my defined funcs(show log functions)
 source ./log.sh
 
 localhost="127.0.0.1"
-user_home="/root/"
-bitcoind_path="/home/root/work/sinnga/src/"
-bitcoincli_path="/home/root/work/sinnga/src/"
+user_home="/home/"$USER"/"
+bitcoind_path="../../src/"
+bitcoincli_path="../../src/"
 
 #bitcoind bind and rpcbind setting
 ##default port setting(regtest : 18407 main:8407)

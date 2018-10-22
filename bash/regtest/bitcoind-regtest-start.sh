@@ -1,6 +1,5 @@
 #!/bin/bash
 source ./bitcoind-base.sh
-source ./log.sh
 
 target=""
 bitcoin_arg=""
@@ -19,6 +18,7 @@ do
             ;;
         ?)
             echo "unkown argument"
+            show_argument_info
             exit 1
             ;;
     esac
