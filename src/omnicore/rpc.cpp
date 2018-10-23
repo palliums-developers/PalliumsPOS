@@ -163,6 +163,7 @@ bool BalanceToJSON(const std::string& address, uint32_t property, UniValue& bala
 UniValue omni_getfeedistribution(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getfeedistribution distributionid\n"
@@ -230,6 +231,7 @@ UniValue omni_getfeedistribution(const JSONRPCRequest& request)
 UniValue omni_getfeedistributions(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getfeedistributions propertyid\n"
@@ -306,6 +308,7 @@ UniValue omni_getfeedistributions(const JSONRPCRequest& request)
 UniValue omni_getfeetrigger(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(
             "omni_getfeetrigger ( propertyid )\n"
@@ -357,6 +360,7 @@ UniValue omni_getfeetrigger(const JSONRPCRequest& request)
 UniValue omni_getfeeshare(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 2)
         throw runtime_error(
             "omni_getfeeshare ( address ecosystem )\n"
@@ -429,6 +433,7 @@ UniValue omni_getfeeshare(const JSONRPCRequest& request)
 UniValue omni_getfeecache(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(
             "omni_getfeecache ( propertyid )\n"
@@ -484,6 +489,7 @@ UniValue omni_getfeecache(const JSONRPCRequest& request)
 UniValue omni_getseedblocks(const JSONRPCRequest& request) 
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 2)
         throw runtime_error(
             "omni_getseedblocks startblock endblock\n"
@@ -525,6 +531,7 @@ UniValue omni_getseedblocks(const JSONRPCRequest& request)
 UniValue omni_getpayload(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getpayload \"txid\"\n"
@@ -597,6 +604,7 @@ UniValue omni_setautocommit(const JSONRPCRequest& request)
 UniValue mscrpc(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     int extra = 0;
     int extra2 = 0, extra3 = 0;
 
@@ -768,6 +776,7 @@ UniValue mscrpc(const JSONRPCRequest& request)
 UniValue omni_getbalance(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    //LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 2)
         throw runtime_error(
             "omni_getbalance \"address\" propertyid\n"
@@ -800,6 +809,7 @@ UniValue omni_getbalance(const JSONRPCRequest& request)
 UniValue omni_getallbalancesforid(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getallbalancesforid propertyid\n"
@@ -859,6 +869,7 @@ UniValue omni_getallbalancesforid(const JSONRPCRequest& request)
 UniValue omni_getallbalancesforaddress(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getallbalancesforaddress \"address\"\n"
@@ -1139,6 +1150,7 @@ UniValue omni_getwalletaddressbalances(const JSONRPCRequest& request)
 UniValue omni_getproperty(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getproperty propertyid\n"
@@ -1199,7 +1211,8 @@ UniValue omni_getproperty(const JSONRPCRequest& request)
 
 UniValue omni_listproperties(const JSONRPCRequest& request)
 {
-    const UniValue &params = request.params;
+    //const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp)
         throw runtime_error(
             "omni_listproperties\n"
@@ -1256,6 +1269,7 @@ UniValue omni_listproperties(const JSONRPCRequest& request)
 UniValue omni_getcrowdsale(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
         throw runtime_error(
             "omni_getcrowdsale propertyid ( verbose )\n"
@@ -1404,7 +1418,8 @@ UniValue omni_getcrowdsale(const JSONRPCRequest& request)
 
 UniValue omni_getactivecrowdsales(const JSONRPCRequest& request)
 {
-    const UniValue &params = request.params;
+    //const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp)
         throw runtime_error(
             "omni_getactivecrowdsales\n"
@@ -1474,6 +1489,7 @@ UniValue omni_getactivecrowdsales(const JSONRPCRequest& request)
 UniValue omni_getgrants(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getgrants propertyid\n"
@@ -1557,6 +1573,7 @@ UniValue omni_getgrants(const JSONRPCRequest& request)
 UniValue omni_getorderbook(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
         throw runtime_error(
             "omni_getorderbook propertyid ( propertyid )\n"
@@ -1627,6 +1644,7 @@ UniValue omni_getorderbook(const JSONRPCRequest& request)
 UniValue omni_gettradehistoryforaddress(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() < 1 || request.params.size() > 3)
         throw runtime_error(
             "omni_gettradehistoryforaddress \"address\" ( count propertyid )\n"
@@ -1712,6 +1730,7 @@ UniValue omni_gettradehistoryforaddress(const JSONRPCRequest& request)
 UniValue omni_gettradehistoryforpair(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() < 2 || request.params.size() > 3)
         throw runtime_error(
             "omni_gettradehistoryforpair propertyid propertyid ( count )\n"
@@ -1760,6 +1779,7 @@ UniValue omni_gettradehistoryforpair(const JSONRPCRequest& request)
 UniValue omni_getactivedexsells(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(
             "omni_getactivedexsells ( address )\n"
@@ -1884,6 +1904,7 @@ UniValue omni_getactivedexsells(const JSONRPCRequest& request)
 UniValue omni_listblocktransactions(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_listblocktransactions index\n"
@@ -1937,6 +1958,7 @@ UniValue omni_listblocktransactions(const JSONRPCRequest& request)
 UniValue omni_gettransaction(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_gettransaction \"txid\"\n"
@@ -1976,6 +1998,7 @@ UniValue omni_gettransaction(const JSONRPCRequest& request)
 UniValue omni_listtransactions(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 5)
         throw runtime_error(
             "omni_listtransactions ( \"address\" count skip startblock endblock )\n"
@@ -2050,6 +2073,7 @@ UniValue omni_listtransactions(const JSONRPCRequest& request)
 
 UniValue omni_listpendingtransactions(const JSONRPCRequest& request)
 {
+    LoadWalletMain(request);
     const UniValue &params = request.params;
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(
@@ -2102,7 +2126,8 @@ UniValue omni_listpendingtransactions(const JSONRPCRequest& request)
 
 UniValue omni_getinfo(const JSONRPCRequest& request)
 {
-    const UniValue &params = request.params;
+    //const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 0)
         throw runtime_error(
             "omni_getinfo\n"
@@ -2187,7 +2212,8 @@ UniValue omni_getinfo(const JSONRPCRequest& request)
 
 UniValue omni_getactivations(const JSONRPCRequest& request)
 {
-    const UniValue &params = request.params;
+    //const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 0)
         throw runtime_error(
             "omni_getactivations\n"
@@ -2253,6 +2279,7 @@ UniValue omni_getactivations(const JSONRPCRequest& request)
 UniValue omni_getsto(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
         throw runtime_error(
             "omni_getsto \"txid\" \"recipientfilter\"\n"
@@ -2303,6 +2330,7 @@ UniValue omni_getsto(const JSONRPCRequest& request)
 UniValue omni_gettrade(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_gettrade \"txid\"\n"
@@ -2359,7 +2387,8 @@ UniValue omni_gettrade(const JSONRPCRequest& request)
 
 UniValue omni_getcurrentconsensushash(const JSONRPCRequest& request)
 {
-    const UniValue &params = request.params;
+    //const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 0)
         throw runtime_error(
             "omni_getcurrentconsensushash\n"
@@ -2396,6 +2425,7 @@ UniValue omni_getcurrentconsensushash(const JSONRPCRequest& request)
 UniValue omni_getmetadexhash(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() > 1)
         throw runtime_error(
             "omni_getmetadexhash propertyId\n"
@@ -2441,6 +2471,7 @@ UniValue omni_getmetadexhash(const JSONRPCRequest& request)
 UniValue omni_getbalanceshash(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "omni_getbalanceshash propertyid\n"

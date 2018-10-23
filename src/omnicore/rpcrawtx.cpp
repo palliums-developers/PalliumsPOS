@@ -35,7 +35,6 @@ extern CCriticalSection cs_main;
 extern void omni_GetWalletForJSONRPCRequest(const JSONRPCRequest& request);
 void LoadWalletMain(const JSONRPCRequest& request)
 {
-	int i = testfunc();
     omni_GetWalletForJSONRPCRequest(request);	
 }
 UniValue omni_decodetransaction(const JSONRPCRequest& request)
