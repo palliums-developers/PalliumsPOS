@@ -183,12 +183,12 @@ void TXHistoryDialog::setWalletModel(WalletModel *model)
 int TXHistoryDialog::PopulateHistoryMap()
 {
     // TODO: locks may not be needed here -- looks like wallet lock can be removed
-    if (NULL == pwalletMain) return 0;
+    //if (NULL == pwalletMain) return 0;
     // try and fix intermittent freeze on startup and while running by only updating if we can get required locks
-    TRY_LOCK(cs_main,lckMain);
-    if (!lckMain) return 0;
-    TRY_LOCK(pwalletMain->cs_wallet, lckWallet);
-    if (!lckWallet) return 0;
+    //TRY_LOCK(cs_main,lckMain);
+    //if (!lckMain) return 0;
+    //TRY_LOCK(pwalletMain->cs_wallet, lckWallet);
+    //if (!lckWallet) return 0;
 
     int64_t nProcessed = 0; // counter for how many transactions we've added to history this time
 
