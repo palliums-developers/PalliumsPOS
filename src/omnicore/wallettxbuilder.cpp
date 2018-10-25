@@ -126,7 +126,7 @@ int WalletTxBuilder(
 		auto it = pwalletMain->mapWallet.find(txNew->GetHash());
 		if (it == pwalletMain->mapWallet.end()) {
 			LogPrintf("not found wallet from pwalletMain->mapwallet."); 
-//			return MP_ERR_WALLET_ACCESS;
+			return MP_ERR_WALLET_ACCESS;
 		}
 /*	    CWalletTx& oldWtx = it->second;
         mapValue_t mapValue = oldWtx.mapValue; 
