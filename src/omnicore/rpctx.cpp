@@ -1270,8 +1270,7 @@ UniValue omni_sendchangeissuer(const JSONRPCRequest& request)
 
 UniValue omni_sendenablefreezing(const JSONRPCRequest& request)
 {
-    std::shared_ptr<CWallet> const walletMain = GetWalletForJSONRPCRequest(request); 
-	 pwalletMain = walletMain.get();
+	omni_GetWalletForJSONRPCRequest(request);   
 	const UniValue &params = request.params; 
 	const bool& fHelp = request.fHelp;
     if (fHelp || params.size() != 2)
