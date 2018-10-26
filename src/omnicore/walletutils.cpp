@@ -47,13 +47,7 @@ bool AddressToPubKey(const std::string& key, CPubKey& pubKey)
     // Case 1: Bitcoin address and the key is in the wallet
     if (pwalletMain && IsValidDestinationString(key)) {
         CTxDestination dest = DecodeDestination(key);
-        auto id = boost::get<CKeyID>(&dest);
-        if(id == nullptr)
-        {
-            PrintToLog("%s() ERROR: no public key in wallet for redemption address %s\n", __func__, key);
-            return false;
-        }
-        CKeyID keyID = *id;
+        CKeyID keyID = boost::get<CKeyID>(dest);
         if (!pwalletMain->GetPubKey(keyID, pubKey)) {
             PrintToLog("%s() ERROR: no public key in wallet for redemption address %s\n", __func__, key);
             return false;
