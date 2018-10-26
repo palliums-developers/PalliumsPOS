@@ -776,7 +776,7 @@ UniValue mscrpc(const JSONRPCRequest& request)
 UniValue omni_getbalance(const JSONRPCRequest& request)
 {
     const UniValue &params = request.params;
-    //LoadWalletMain(request);
+    LoadWalletMain(request);
     if (request.fHelp || request.params.size() != 2)
         throw runtime_error(
             "omni_getbalance \"address\" propertyid\n"
