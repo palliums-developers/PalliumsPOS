@@ -16,7 +16,7 @@ do
             target=$OPTARG
             ;;
         o)
-            bitcoin_arg=$OPTARG
+            bitcoin_arg="${OPTARG}"
             ;;
         ?)
             echo "unkown argument"
@@ -55,7 +55,6 @@ logshow "stop bitcoind " $target
 logshow "bitcoin-cli path: " $bitcoind_path
 cd $bitcoind_path
 
-logshow "command : " ./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} $bitcoin_arg
-./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} $bitcoin_arg
-
+logshow "command : " ./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} "$@"
+                     ./bitcoin-cli -regtest -rpcport=$BITCOIND_REGRPCPORT -rpcconnect=$target_rpcaddr -datadir=${datadir_path} "$@"
 cd -
