@@ -1688,7 +1688,7 @@ bool AppInitMain()
     if (!g_wallet_init_interface.Open()) return false;
 
 	// Omni Core code should be initialized and wallet should now be loaded, perform an initial populat$
-	CheckWalletUpdate();
+	CheckWalletUpdate(true);
 
     // ********************************************************* Step 10: data directory maintenance
     LogPrintf("********************************************************* Step 10: data directory maintenance\n");

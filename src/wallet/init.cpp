@@ -16,6 +16,8 @@
 #include <wallet/wallet.h>
 #include <wallet/walletutil.h>
 
+#include <omnicore/wallet_ref.h>
+
 class WalletInit : public WalletInitInterface {
 public:
 
@@ -233,6 +235,7 @@ bool WalletInit::Open() const
             return false;
         }
         AddWallet(pwallet);
+        pwalletMain = pwallet.get();
     }
 
     return true;
