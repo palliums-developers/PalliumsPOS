@@ -123,21 +123,18 @@ int WalletTxBuilder(
         return 0;
     } else {
 //jg checking...
-		auto it = pwalletMain->mapWallet.find(txNew->GetHash());
-		if (it == pwalletMain->mapWallet.end()) {
-			LogPrintf("not found wallet from pwalletMain->mapwallet."); 
-//			return MP_ERR_WALLET_ACCESS;
-		}
-/*	    CWalletTx& oldWtx = it->second;
-        mapValue_t mapValue = oldWtx.mapValue; 
-		mapValue["replaces_txid"] = oldWtx.GetHash().ToString();
-*/
 		std::vector<std::pair<std::string, std::string> > vOrderForm;
 		CValidationState state; 
 		mapValue_t mapValue;
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s: %s; nFeeRet = %d\n", __func__, txNew->ToString(), nFeeRet);
-        if (!pwalletMain->CommitTransaction(txNew, mapValue, std::move(vOrderForm), {},  reserveKey, g_connman.get(), state)) return MP_ERR_COMMIT_TX;
+        std::string strAccount;
+        std::map<CTxDestination, CAddressBookData>::iterator mi = pwalletMain->mapAddressBook.find(DecodeDestination(senderAddress));                                                                                                                                                        
+        if (mi != pwalletMain->mapAddressBook.end() && !(*mi).second.name.empty()) {
+             strAccount = (*mi).second.name;
+        }
+        fprintf(stderr, "----------------------------fromAccount %s \n", strAccount.c_str());
+        if (!pwalletMain->CommitTransaction(txNew, mapValue, std::move(vOrderForm), std::move(strAccount),  reserveKey, g_connman.get(), state)) return MP_ERR_COMMIT_TX;
         retTxid = txNew->GetHash();
         return 0;
     }
