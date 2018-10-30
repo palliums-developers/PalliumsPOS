@@ -6,6 +6,7 @@
 #include "script/standard.h"
 #include "serialize.h"
 #include "utilstrencodings.h"
+#include "policy/policy.h"
 
 #include <boost/foreach.hpp>
 
@@ -27,7 +28,7 @@ extern CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFe
 int64_t GetDustThreshold(const CScript& scriptPubKey)
 {
     CTxOut txOut(0, scriptPubKey);
-    return GetDustThreshold(txOut, minRelayTxFee);
+    return GetDustThreshold(txOut, dustRelayFee);
 }
 
 /**
