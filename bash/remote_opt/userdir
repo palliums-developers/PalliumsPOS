@@ -1,2 +1,0 @@
-user=yinzq
-rootdir="/home/"${user}"/bitcoin/" #last "/" must be
