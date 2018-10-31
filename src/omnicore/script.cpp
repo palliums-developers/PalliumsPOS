@@ -3,6 +3,7 @@
 #include "amount.h"
 #include "script/script.h"
 #include <policy/feerate.h>   
+#include <policy/policy.h>
 #include "script/standard.h"
 #include "serialize.h"
 #include "utilstrencodings.h"
@@ -27,7 +28,7 @@ extern CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFe
 int64_t GetDustThreshold(const CScript& scriptPubKey)
 {
     CTxOut txOut(0, scriptPubKey);
-    return GetDustThreshold(txOut, minRelayTxFee);
+    return GetDustThreshold(txOut, /*minRelayTxFee*/ ::dustRelayFee);
 }
 
 /**
