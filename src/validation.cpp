@@ -2489,7 +2489,7 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
 	unsigned int nNumMetaTxs = 0;
 
     //! Omni Core: begin block connect notification
-	LogPrint(BCLog::BENCH,"Omni Core handler: block connect begin [height: %d]\n", GetHeight()); 
+	LogPrint(BCLog::OMNI,"Omni Core handler: block connect begin [height: %d]\n", GetHeight()); 
     mastercore_handler_block_begin(GetHeight(), pindexNew);
 
     // Remove conflicting transactions from the mempool.;
@@ -2499,13 +2499,13 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     chainActive.SetTip(pindexNew);
     UpdateTip(pindexNew, chainparams);
 
-	for(CTransactionRef tx : pthisBlock->vtx) {
-		LogPrint(BCLog::BENCH, "Omni Core handler: new confirmed transaction [height: %d, idx: %u]\n", GetHeight(), nTxIdx);
-		if (mastercore_handler_tx(*tx, chainActive.Height(), nTxIdx++, pindexNew)) ++nNumMetaTxs;
+	for(CTransactionRef tx : blockConnecting.vtx) {
+		LogPrint(BCLog::OMNI, "Omni Core handler: new confirmed transaction [height: %d, idx: %u]\n", GetHeight(), nTxIdx);
+		if (mastercore_handler_tx(*tx, GetHeight(), nTxIdx++, pindexNew)) ++nNumMetaTxs;
 	}
 
 	//! Omni Core: end of block connect notification
-	LogPrint(BCLog::BENCH, "Omni Core handler: block connect end [new height: %d, found: %u txs]\n", GetHeight(), nNumMetaTxs);
+	LogPrint(BCLog::OMNI, "Omni Core handler: block connect end [new height: %d, found: %u txs]\n", GetHeight(), nNumMetaTxs);
 	mastercore_handler_block_end(GetHeight(), pindexNew, nNumMetaTxs);
 
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;

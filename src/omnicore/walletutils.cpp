@@ -199,7 +199,7 @@ static int64_t GetEstimatedFeePerKb()
 static int64_t GetEconomicThreshold(const CTxOut& txOut)
 {
     // Minimum value needed to relay the transaction
-    int64_t nThresholdDust = GetDustThreshold(txOut, minRelayTxFee);
+    int64_t nThresholdDust = GetDustThreshold(txOut, /*minRelayTxFee*/ ::dustRelayFee);
 
     // Use the estimated fee that is also used to contruct transactions.
     // We use the absolute minimum, so we divide by 3, to get rid of the
