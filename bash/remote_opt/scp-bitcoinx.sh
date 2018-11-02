@@ -1,4 +1,5 @@
 #!/bin/bash
-./scp-files.sh ../../src/bitcoind src 
-./scp-files.sh ../../src/bitcoin-cli  src
-./scp-files.sh ../../src/bitcoin-tx  src
+source ./remote.conf
+./scp-files.sh ../../src/bitcoind ${rootdir}"src" 
+./scp-files.sh ../../src/bitcoin-cli ${rootdir}"src"
+./scp-files.sh ../../src/bitcoin-tx  ${rootdir}"src"

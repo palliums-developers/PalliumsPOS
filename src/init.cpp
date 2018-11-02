@@ -48,6 +48,7 @@
 #include <walletinitinterface.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <wallet/wallet.h>
 
 #ifndef WIN32
 #include <signal.h>
@@ -66,6 +67,7 @@
 #include <zmq/zmqrpc.h>
 #endif
 
+extern CWallet* pwalletMain;
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
 static const bool DEFAULT_REST_ENABLE = false;
@@ -1687,6 +1689,13 @@ bool AppInitMain()
 	LogPrintf("********************************************************* Step 9: load wallet\n");
     if (!g_wallet_init_interface.Open()) return false;
 
+    //Omni Init pwalletMain(temporary for ui)
+    for (const std::string& walletFile : gArgs.GetArgs("-wallet")) {
+          std::shared_ptr<CWallet> sp = GetWallet(walletFile);
+          if(sp) {
+              pwalletMain = sp.get();
+          }
+    }
 	// Omni Core code should be initialized and wallet should now be loaded, perform an initial populat$
 	CheckWalletUpdate(true);
 

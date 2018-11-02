@@ -98,14 +98,14 @@ extern bool AbortNode(CValidationState& state, const std::string& strMessage, co
 
 
 //! Exodus address (changes based on network)
-static std::string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
+static std::string exodus_address = "2N5hxn4R4kLoC3JzajV96semKG39P5bWZaW";
 
 //! Mainnet Exodus address
-static const std::string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
+static const std::string exodus_mainnet = "2N5hxn4R4kLoC3JzajV96semKG39P5bWZaW";
 //! Testnet Exodus address
-static const std::string exodus_testnet = "mpexoDuSkGGqvqrkrjiFng38QPkJQVFyqv";
+static const std::string exodus_testnet = "2N7aBQacTwPjqBYn7cTFAjfejQbLTmmPrRb";
 //! Testnet Exodus crowdsale address
-static const std::string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+static const std::string getmoney_testnet = "2N8GjoR6BTurfjrU3eqJMfaiorFVCbKrmhJ";
 
 static int nWaterlineBlock = 0;
 
