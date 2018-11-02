@@ -1768,7 +1768,7 @@ bool AppInitMain()
 
     g_wallet_init_interface.Start(scheduler);
 
-    MintStart(threadGroup);
+    DPoS::GetInstance();
 
     return true;
 }

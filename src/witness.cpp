@@ -1,11 +1,11 @@
 #include "validation.h"
 #include <witness.h>
 #include <base58.h>
-#include <wallet/wallet.h>
 #include <rpc/mining.h>
 #include <policy/policy.h>
 #include <util.h>
 #include <script/script.h>
+#include <wallet/wallet.h>
 
 bool GreaterSort(uint160 a,uint160 b){
     return a < b;
@@ -36,101 +36,6 @@ uint160 Address2uint160(const std::string& address)
     return uint160();
 }
 
-uint160 local_address;
-
-std::vector<uint160> witness_keys;
-
-bool GetLocalKeyID(CWallet* const pwallet)
-{
-    bool find=false;
-    witness_keys.clear();
-    for(auto &address:vWitnessAddresses)
-    {
-        uint160 u160addr = Address2uint160(address);
-        if (u160addr.IsNull()) {
-            LogPrintf("Error:address %s is invalid\n",address);
-            return false;
-        }
-        witness_keys.push_back(u160addr);
-
-        CTxDestination dest = DecodeDestination(address);
-        auto keyid = GetKeyForDestination(*pwallet, dest);
-        if (keyid.IsNull()) {
-            continue;
-        }
-        CKey vchSecret;
-        if (!pwallet->GetKey(keyid, vchSecret)) {
-            continue;
-        }
-        local_address=u160addr;
-        find = true;
-    }
-    std::sort(witness_keys.begin(),witness_keys.end(),GreaterSort);
-    return find;
-}
-
-
-void ScheduleProductionLoop()
-{
-    std::shared_ptr<CWallet> const wallet = GetWallet("");
-    CWallet* const pwallet = wallet.get();
-    if (!pwallet||!EnsureWalletIsAvailable(pwallet, false))
-    {
-        LogPrintf("Wallet does not exist or is not loaded\n");
-        throw;
-    }
-    while(!GetLocalKeyID(pwallet))
-    {
-        LogPrintf("Local witness address not find\n");
-        MilliSleep(1000);
-        continue;
-    }
-
-    LogPrintf("Launching block production for %d witnesses.", witness_keys.size());
-    {
-    }
-
-    while (pwallet->IsLocked())
-    {
-        LogPrintf("Info: Minting suspended due to locked wallet.\n");;
-        MilliSleep(1000);
-    }
-
-    while(true)
-    {
-        //XXX:Schedule for the next second's tick regardless of chain state
-        // If we would wait less than 50ms, wait for the whole second.
-        int64_t now = GetTimeMicros();
-        int64_t time_to_next_second = 1000000 - (now % 1000000);
-        if( time_to_next_second < 50000 )      // we must sleep for at least 50ms
-            time_to_next_second += 1000000;
-        int64_t next_wakeup_milli=(now + time_to_next_second)/1000;
-        MilliSleep(next_wakeup_milli);//sleep for next_wakeup_milli ms
-        LogPrintf("Witness Block Production");
-    }
-}
-
-// minter thread
-void static ThreadMinter(void* parg)
-{
-    LogPrintf("ThreadMinter started\n");
-    try {
-        ScheduleProductionLoop();
-    }
-    catch (std::exception& e) {
-        error("%s ThreadMinter()", e.what());
-    }
-}
-
-
-// minter
-void MintStart(boost::thread_group& threadGroup)
-{
-    //  mint blocks in the background
-    threadGroup.create_thread(boost::bind(&ThreadMinter, nullptr));
-}
-
-
 bool fUseIrreversibleBlock = true;
 
 static Vote vote;
@@ -145,11 +50,6 @@ std::vector<Delegate> Vote::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_
 {
     std::shared_ptr<CWallet> const wallet = GetWallet("");
     CWallet* const pwallet = wallet.get();
-    if (!pwallet||!EnsureWalletIsAvailable(pwallet, false))
-    {
-        LogPrintf("Wallet does not exist or is not loaded\n");
-        throw;
-    }
     std::vector<Delegate> result;
     std::set<CKeyID> delegates;
 
@@ -178,14 +78,31 @@ std::vector<Delegate> Vote::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_
     }
 }
 
-typedef boost::shared_lock<boost::shared_mutex> read_lock;
-typedef boost::unique_lock<boost::shared_mutex> write_lock;
-
 void Vote::DeleteInvalidVote(uint64_t height)
 {
     //TODO:complete this function
     return;
 }
+
+std::string Vote::GetDelegate(const CKeyID &keyid)
+{
+    for(auto &address:vWitnessAddresses)
+    {
+        CTxDestination dest = DecodeDestination(address);
+        if (!IsValidDestination(dest))
+            continue;
+        auto kid = boost::get<CKeyID>(&dest);;
+        if (!kid)
+            continue;
+        if(*kid==keyid)
+            return address;
+    }
+    return std::string();
+}
+
+typedef boost::shared_lock<boost::shared_mutex> read_lock;
+typedef boost::unique_lock<boost::shared_mutex> write_lock;
+
 
 static DPoS gDPoS;
 static DPoS *gpDPoS = nullptr;
@@ -195,23 +112,26 @@ DPoS::~DPoS()
     WriteIrreversibleBlockInfo(cIrreversibleBlockInfo);
 }
 
+#define BLOCK_INTERVAL_TIME 6
+#define MAX_DELEGATE_NUM 6
+
 void DPoS::Init()
 {
     nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
         cSuperForgerAddress = "166D9UoFdPcDEGFngswE226zigS8uBnm3C";
-        gDPoS.nDposStartTime = 1539181795;
+        gDPoS.nDposStartTime = 0;
 
-        nMaxDelegateNumber = 101;
-        nBlockIntervalTime = 3;
-        nDposStartHeight = 7000;
+        nMaxDelegateNumber = MAX_DELEGATE_NUM;
+        nBlockIntervalTime = BLOCK_INTERVAL_TIME;
+        nDposStartHeight = 1000;
     } else {
         cSuperForgerAddress = "my5ioJEbbhMjRzgyQpcnq6fmbfUMQgTqMZ";
         gDPoS.nDposStartTime = 0;
 
-        nMaxDelegateNumber = 10;
-        nBlockIntervalTime = 3;
-        nDposStartHeight = 7000;
+        nMaxDelegateNumber = MAX_DELEGATE_NUM;
+        nBlockIntervalTime = BLOCK_INTERVAL_TIME;
+        nDposStartHeight = 1000;
     }
 
     strIrreversibleBlockFileName = (GetDataDir() / "dpos" / "irreversible_block.dat").string();
@@ -296,7 +216,6 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::string& cAddress, ti
             if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
                 return false;
             } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].keyid == keyid) {
-                //cDelegateInfo.delegates.clear();
                 return true;
             } else {
                 return false;
@@ -594,9 +513,9 @@ bool DPoS::CheckBlockDelegate(const CBlock& block)
 
 bool DPoS::CheckBlockHeader(const CBlockHeader& block)
 {
-    auto t = time(NULL) + 3;
+    auto t = time(nullptr) + BLOCK_INTERVAL_TIME;
     if(block.nTime > t) {
-        LogPrintf("Block:%u time:%s error\n", block.nTime, t - 3);
+        LogPrintf("Block:%u time:%s error\n", block.nTime, t - BLOCK_INTERVAL_TIME);
         return false;
     }
 
@@ -605,41 +524,6 @@ bool DPoS::CheckBlockHeader(const CBlockHeader& block)
     }
 
     return true;
-
-    BlockMap::iterator miSelf = mapBlockIndex.find(block.hashPrevBlock);
-    if(miSelf == mapBlockIndex.end()) {
-        LogPrintf("CheckBlockHeader find blockindex(%s) error\n", block.hashPrevBlock.ToString().c_str());
-        return false;
-    }
-
-    CBlockIndex* pPrevBlockIndex = miSelf->second;
-
-    if(pPrevBlockIndex->nHeight == nDposStartHeight - 1) {
-        //SetStartTime(chainActive[nDposStartHeight -1]->nTime);
-        SetStartTime(pPrevBlockIndex->nTime);
-    }
-
-    if(pPrevBlockIndex->nHeight < nDposStartHeight) {
-        return true;
-    }
-
-    bool ret = false;
-    uint64_t nCurrentLoopIndex = GetLoopIndex(block.nTime);
-    uint32_t nCurrentDelegateIndex = GetDelegateIndex(block.nTime);
-    uint64_t nPrevLoopIndex = GetLoopIndex(pPrevBlockIndex->nTime);
-    uint32_t nPrevDelegateIndex = GetDelegateIndex(pPrevBlockIndex->nTime);
-
-    if(nCurrentLoopIndex > nPrevLoopIndex
-            || (nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex)) {
-        ret = true;
-    } else {
-        ret = false;
-    }
-
-    if(ret == false) {
-        LogPrintf("DPoS CheckBlockHeader hash(%s) error\n", block.GetHash().ToString().c_str());
-    }
-    return ret;
 }
 
 bool DPoS::CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo)
@@ -658,9 +542,9 @@ bool DPoS::CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo)
 
 bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
 {
-    auto t = time(NULL) + 3;
+    auto t = time(nullptr) + BLOCK_INTERVAL_TIME;
     if(block.nTime > t) {
-        LogPrintf("Block:%u time:%s error\n", block.nTime, t - 3);
+        LogPrintf("Block:%u time:%s error\n", block.nTime, t - BLOCK_INTERVAL_TIME);
         return false;
     }
 

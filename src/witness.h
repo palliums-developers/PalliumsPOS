@@ -10,11 +10,9 @@
 #include <sync.h>
 #include <chain.h>
 #include <key_io.h>
+#include <rpc/server.h>
 
 extern bool fUseIrreversibleBlock;
-
-void MintStart(boost::thread_group& threadGroup);
-
 
 struct Delegate{
     CKeyID keyid;
@@ -47,9 +45,11 @@ public:
     static Vote& GetInstance();
     std::vector<Delegate> GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum);
     void DeleteInvalidVote(uint64_t height);
+    CKeyID GetDelegate(const std::string& name);
+    std::string GetDelegate(const CKeyID& keyid);
 private:
     boost::shared_mutex lockMapHashHeightInvalidVote;
-}
+};
 
 class DPoS{
 public:

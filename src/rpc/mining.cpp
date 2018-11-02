@@ -28,6 +28,8 @@
 
 #include <memory>
 #include <stdint.h>
+#include <witness.h>
+#include <wallet/wallet.h>
 
 unsigned int ParseConfirmTarget(const UniValue& value)
 {
@@ -214,7 +216,8 @@ static UniValue getmininginfo(const JSONRPCRequest& request)
     obj.pushKV("blocks",           (int)chainActive.Height());
     obj.pushKV("currentblockweight", (uint64_t)nLastBlockWeight);
     obj.pushKV("currentblocktx",   (uint64_t)nLastBlockTx);
-    obj.pushKV("difficulty",       (double)GetDifficulty(chainActive.Tip()));
+//    obj.pushKV("difficulty",       (double)GetDifficulty(chainActive.Tip()));
+    obj.pushKV("difficulty",       0);
     obj.pushKV("networkhashps",    getnetworkhashps(request));
     obj.pushKV("pooledtx",         (uint64_t)mempool.size());
     obj.pushKV("chain",            Params().NetworkIDString());
@@ -932,6 +935,128 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
     return result;
 }
 
+
+CCriticalSection cs_mining;
+bool fIsDelegating = false;
+std::string delegateaddress;
+CKey delegatekey;
+
+
+void* ThreadDelegating(void *arg)
+{
+    DPoS& dPos = DPoS::GetInstance();
+
+    CPubKey pubkey = delegatekey.GetPubKey();
+    std::vector<unsigned char> dd;
+    CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << ToByteVector(pubkey.GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    std::vector<unsigned char> vctPublicKey;
+    opcodetype op;
+    CScript::const_iterator it = scriptPubKey.begin();
+    GetScriptOp(it,scriptPubKey.end(),op,&vctPublicKey);
+
+    CKeyID keyID = pubkey.GetID();
+    auto addr = EncodeDestination(keyID);
+
+    while(!ShutdownRequested() && fIsDelegating){
+        do {
+            LOCK(cs_main);
+            time_t t = time(nullptr);
+            DelegateInfo cDelegateInfo;
+
+            if(dPos.IsMining(cDelegateInfo, addr, t) == false){
+                break;
+            }
+            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::DelegateInfoToScript(cDelegateInfo, delegatekey, t), t);
+            if(pblock) {
+                unsigned int extraNonce = 0;
+                IncrementExtraNonce(&pblock->block, chainActive.Tip(), extraNonce);
+
+                std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>(pblock->block);
+
+                if(ProcessNewBlock(Params(), blockptr, true, nullptr) == false) {
+                    LogPrintf("ProcessNewBlock failed");
+                }
+
+                printf("mining addr:%s height:%u time:%lu starttime:%lu...\n", addr.c_str(), chainActive.Height(), t, DPoS::GetInstance().GetStartTime());
+            }
+        } while(0);
+        sleep(1);
+    }
+    return nullptr;
+}
+
+UniValue startforging(const JSONRPCRequest& request)
+{
+    std::shared_ptr<CWallet> const wallet = GetWallet("");
+    CWallet* const pwallet = wallet.get();
+
+    if (request.fHelp || request.params.size() > 2)
+        throw std::runtime_error(
+            "startforging delegateAddress"
+            "\nstart forging on the sinnga address which have been registered as delegate"
+            "\nand receivce enough votes and rank in the top 101.\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nArguments:\n"
+            "1. \"delegateAddress\"     (string, required) The delegate address.\n"
+            "\nResult:\n"
+            "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
+            "\nExamples:\n"
+            + HelpExampleCli("startforging", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+            + HelpExampleRpc("startforging", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+    );
+
+    LOCK(cs_mining);
+    if(fIsDelegating == false) {
+        delegateaddress = request.params[0].get_str();
+        CTxDestination dest=DecodeDestination(delegateaddress);
+        if (!IsValidDestination(dest)) {
+            LogPrintf("startforging delegateaddress is not a valid keyid");
+            return  "false";
+        }
+        CKeyID *delegate = boost::get<CKeyID>(&dest);
+        if (!delegate) {
+            LogPrintf("startforging dest is not a valid keyid");
+            return  "false";
+        }
+        if (!pwallet->GetKey(*delegate, delegatekey)) {
+            LogPrintf("startforging address:%s get private_key fail", request.params[0].get_str());
+            return "false";
+        }
+
+        if(!(delegateaddress == DPoS::GetInstance().GetSuperForgerAddress()) && Vote::GetInstance().GetDelegate(*delegate).empty()) {
+            LogPrintf("startforging address:%s not registe", request.params[0].get_str());
+            return "false";
+        }
+
+        fIsDelegating = true;
+        pthread_t id;
+        pthread_create(&id, NULL, ThreadDelegating, NULL);
+    }
+
+    return "true";
+}
+
+UniValue stopforging(const JSONRPCRequest& request)
+{
+    std::shared_ptr<CWallet> const wallet = GetWallet("");
+    CWallet* const pwallet = wallet.get();
+    if (request.fHelp || request.params.size() > 1)
+        throw std::runtime_error(
+            "stopforging"
+            "\nstop forging.\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nResult:\n"
+            "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
+            "\nExamples:\n"
+            + HelpExampleCli("stopforging", "")
+            + HelpExampleRpc("stopforging", "")
+    );
+
+    fIsDelegating = false;
+    return "true";
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -940,7 +1065,8 @@ static const CRPCCommand commands[] =
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       {"template_request"} },
     { "mining",             "submitblock",            &submitblock,            {"hexdata","dummy"} },
-
+    { "mining",             "startforging",           &startforging,           {"address"} },
+    { "mining",             "stopforging",            &stopforging,            {} },
 
     { "generating",         "generatetoaddress",      &generatetoaddress,      {"nblocks","address","maxtries"} },
 
