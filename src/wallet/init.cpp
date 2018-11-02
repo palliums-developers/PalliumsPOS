@@ -235,7 +235,6 @@ bool WalletInit::Open() const
             return false;
         }
         AddWallet(pwallet);
-        pwalletMain = pwallet.get();
     }
 
     return true;
