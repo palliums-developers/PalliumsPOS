@@ -959,7 +959,6 @@ void* ThreadDelegating(void *arg)
 
     while(!ShutdownRequested() && fIsDelegating){
         do {
-            LOCK(cs_main);
             time_t t = time(nullptr);
             DelegateInfo cDelegateInfo;
 
@@ -969,8 +968,10 @@ void* ThreadDelegating(void *arg)
             std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::DelegateInfoToScript(cDelegateInfo, delegatekey, t), t);
             if(pblock) {
                 unsigned int extraNonce = 0;
-                IncrementExtraNonce(&pblock->block, chainActive.Tip(), extraNonce);
-
+                {
+                    LOCK(cs_main);
+                    IncrementExtraNonce(&pblock->block, chainActive.Tip(), extraNonce);
+                }
                 std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>(pblock->block);
 
                 if(ProcessNewBlock(Params(), blockptr, true, nullptr) == false) {

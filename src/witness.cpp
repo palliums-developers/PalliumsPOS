@@ -98,19 +98,19 @@ void DPoS::Init()
 {
     nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
-        cSuperForgerPublickey = "03a15958c6069f312eff5ff94d471588392b9fd4ac601842a0f19a7e25f1b69582";
+        cSuperForgerPublickey = "0294c443187ab6442621b3a7c1813902318bdefb2a3928ad38ced8a266766576de";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
-        nDposStartHeight = 1000;
+        nDposStartHeight = 10;
     } else {
-        cSuperForgerPublickey = "03a15958c6069f312eff5ff94d471588392b9fd4ac601842a0f19a7e25f1b69582";
+        cSuperForgerPublickey = "0294c443187ab6442621b3a7c1813902318bdefb2a3928ad38ced8a266766576de";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
-        nDposStartHeight = 1000;
+        nDposStartHeight = 10;
     }
 
     strIrreversibleBlockFileName = (GetDataDir() / "dpos" / "irreversible_block.dat").string();
@@ -433,7 +433,7 @@ bool DPoS::GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block)
     bool ret = false;
 
     auto tx = block.vtx[0];
-    if(tx->IsCoinBase() && tx->vout.size() == 2) {
+    if(tx->IsCoinBase() && tx->vout.size() == 3) {
         opcodetype op;
         std::vector<unsigned char> vctData;
         {
