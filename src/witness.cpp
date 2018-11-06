@@ -7,34 +7,6 @@
 #include <script/script.h>
 #include <wallet/wallet.h>
 
-bool GreaterSort(uint160 a,uint160 b){
-    return a < b;
-}
-
-uint160 Address2uint160(const std::string& address)
-{
-    const CChainParams& params=Params();
-    std::vector<unsigned char> data;
-    uint160 hash;
-    if (DecodeBase58Check(address, data)) {
-        // base58-encoded Bitcoin addresses.
-        // Public-key-hash-addresses have version 0 (or 111 testnet).
-        // The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
-        const std::vector<unsigned char>& pubkey_prefix = params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
-        if (data.size() == hash.size() + pubkey_prefix.size() && std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
-            std::copy(data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
-            return hash;
-        }
-        // Script-hash-addresses have version 5 (or 196 testnet).
-        // The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
-        const std::vector<unsigned char>& script_prefix = params.Base58Prefix(CChainParams::SCRIPT_ADDRESS);
-        if (data.size() == hash.size() + script_prefix.size() && std::equal(script_prefix.begin(), script_prefix.end(), data.begin())) {
-            std::copy(data.begin() + script_prefix.size(), data.end(), hash.begin());
-            return hash;
-        }
-    }
-    return uint160();
-}
 
 bool fUseIrreversibleBlock = true;
 
@@ -53,10 +25,13 @@ std::vector<Delegate> Vote::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_
     std::vector<Delegate> result;
     std::set<CKeyID> delegates;
 
-    for(auto &address:vWitnessAddresses)
+    for(auto &publickey:vWitnessPublickeys)
     {
-        CTxDestination dest = DecodeDestination(address);
-        auto keyid = GetKeyForDestination(*pwallet, dest);
+        std::vector<unsigned char> data(ParseHex(publickey));
+        CPubKey pubKey(data.begin(), data.end());
+        if (!pubKey.IsFullyValid())
+            LogPrintf("Pubkey % is not a valid public key",publickey);
+        auto keyid = pubKey.GetID();
         if (keyid.IsNull()) {
             continue;
         }
@@ -74,8 +49,10 @@ std::vector<Delegate> Vote::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_
         if(result.size() >= nDelegateNum) {
             break;
         }
+        //TODO:vote num auto detect
         result.push_back(Delegate(*it,vote_num--));
     }
+    return result;
 }
 
 void Vote::DeleteInvalidVote(uint64_t height)
@@ -86,16 +63,18 @@ void Vote::DeleteInvalidVote(uint64_t height)
 
 std::string Vote::GetDelegate(const CKeyID &keyid)
 {
-    for(auto &address:vWitnessAddresses)
+    for(auto &publickey:vWitnessPublickeys)
     {
-        CTxDestination dest = DecodeDestination(address);
-        if (!IsValidDestination(dest))
+        std::vector<unsigned char> data(ParseHex(publickey));
+        CPubKey pubKey(data.begin(), data.end());
+        if (!pubKey.IsFullyValid())
+            LogPrintf("Pubkey % is not a valid public key",publickey);
+        auto kid = pubKey.GetID();
+        if (kid.IsNull()) {
             continue;
-        auto kid = boost::get<CKeyID>(&dest);;
-        if (!kid)
-            continue;
-        if(*kid==keyid)
-            return address;
+        }
+        if(kid==keyid)
+            return publickey;
     }
     return std::string();
 }
@@ -119,14 +98,14 @@ void DPoS::Init()
 {
     nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
-        cSuperForgerAddress = "166D9UoFdPcDEGFngswE226zigS8uBnm3C";
+        cSuperForgerPublickey = "03a15958c6069f312eff5ff94d471588392b9fd4ac601842a0f19a7e25f1b69582";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
         nDposStartHeight = 1000;
     } else {
-        cSuperForgerAddress = "my5ioJEbbhMjRzgyQpcnq6fmbfUMQgTqMZ";
+        cSuperForgerPublickey = "03a15958c6069f312eff5ff94d471588392b9fd4ac601842a0f19a7e25f1b69582";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
@@ -152,26 +131,27 @@ DPoS& DPoS::GetInstance()
     return gDPoS;
 }
 
-bool GetKeyID(const std::string& address,CKeyID& keyID)
+bool GetKeyID(const std::string& publickey,CKeyID& keyID)
 {
-    CTxDestination dest = DecodeDestination(address);
-    if (!IsValidDestination(dest)) {
-        return  false;
+    std::vector<unsigned char> data(ParseHex(publickey));
+    CPubKey pubKey(data.begin(), data.end());
+    if (!pubKey.IsFullyValid())
+        LogPrintf("Pubkey % is not a valid public key",publickey);
+    auto keyid = pubKey.GetID();
+    if (keyid.IsNull()) {
+        return false;
     }
-
-    CKeyID *keyid = boost::get<CKeyID>(&dest);
-    if (!keyid) {
-        return  false;
-    }
-    keyID=*keyid;
+    keyID=keyid;
     return true;
 }
 
-bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::string& cAddress, time_t t)
+bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
 {
     CBlockIndex* pBlockIndex = chainActive.Tip();
     if(pBlockIndex->nHeight < nDposStartHeight - 1) {
-        if(cAddress == cSuperForgerAddress) {
+        CKeyID kid;
+        GetKeyID(cSuperForgerPublickey,kid);
+        if(keyid == kid) {
             static time_t tLast = 0;
             if(t < tLast + nBlockIntervalTime) {
                 return false;
@@ -188,11 +168,6 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::string& cAddress, ti
     uint32_t nCurrentDelegateIndex = GetDelegateIndex(t);
     uint64_t nPrevLoopIndex = GetLoopIndex(pBlockIndex->nTime);
     uint32_t nPrevDelegateIndex = GetDelegateIndex(pBlockIndex->nTime);
-    CKeyID keyid;
-    if(!GetKeyID(cAddress,keyid)){
-        LogPrintf("IsMining: get keyid failed");
-        return false;
-    }
 
     if(pBlockIndex->nHeight == nDposStartHeight - 1) {
         cDelegateInfo = DPoS::GetNextDelegates(t);
@@ -242,7 +217,7 @@ DelegateInfo DPoS::GetNextDelegates(int64_t t)
     LogPrintf("DPoS: GetNextDelegates end\n");
 
     Delegate delegate;
-    GetKeyID(cSuperForgerAddress,delegate.keyid);
+    GetKeyID(cSuperForgerPublickey,delegate.keyid);
     delegate.votes = 7;
     delegates.insert(delegates.begin(), delegate);
 
@@ -335,7 +310,7 @@ uint32_t DPoS::GetDelegateIndex(uint64_t time)
 bool DPoS::CheckCoinbase(const CTransaction& tx, time_t t, int64_t height)
 {
     bool ret = false;
-    if(tx.vout.size() == 2) {
+    if(tx.vout.size() == 3) {
         CTxDestination dest;
         if (ExtractDestination(tx.vout[0].scriptPubKey, dest) ) {
             DelegateInfo cDelegateInfo;
@@ -436,26 +411,21 @@ bool DPoS::ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const C
     return true;
 }
 
-std::string DPoS::GetBlockForgerAddress(const CBlock& block)
-{
-    auto& tx = block.vtx[0];
-
-    std::string ret;
-    if(tx->IsCoinBase() && tx->vout.size() == 2) {
-        CTxDestination dest;
-        if(ExtractDestination(tx->vout[0].scriptPubKey, dest)) {
-            ret = EncodeDestination(dest);
-        }
-    }
-    return ret;
-}
-
 bool DPoS::GetBlockForgerKeyID(CKeyID& keyid, const CBlock& block)
 {
-    bool ret = false;
-    std::string address = GetBlockForgerAddress(block);
-    ret = GetKeyID(address,keyid);
-    return ret;
+    auto& tx = block.vtx[0];
+    if(tx->IsCoinBase() && tx->vout.size() == 3) {
+        CTxDestination dest;
+        if(ExtractDestination(tx->vout[0].scriptPubKey, dest)) {
+            if (auto id = boost::get<CKeyID>(&dest)) {
+                if(!id->IsNull()){
+                    keyid = *id;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 bool DPoS::GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block)
@@ -572,7 +542,8 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     }
 
     if(nBlockHeight < nDposStartHeight) {
-        if(GetBlockForgerAddress(block) == cSuperForgerAddress) {
+        CKeyID kid,superForgerkid;
+        if(GetBlockForgerKeyID(kid,block) && GetKeyID(cSuperForgerPublickey,superForgerkid) && kid == superForgerkid) {
             return true;
         } else {
             LogPrintf("CheckBlock nBlockHeight < nDposStartHeight ForgerAddress error\n");

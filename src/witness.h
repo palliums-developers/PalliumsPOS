@@ -58,7 +58,7 @@ public:
     static DPoS& GetInstance();
     void Init();
 
-    bool IsMining(DelegateInfo& cDelegateInfo, const std::string& address, time_t t);
+    bool IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t);
 
     DelegateInfo GetNextDelegates(int64_t t);
     bool GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex);
@@ -77,12 +77,11 @@ public:
     static bool ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
     static CScript DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
 
-    static std::string GetBlockForgerAddress(const CBlock& block);
     static bool GetBlockForgerKeyID(CKeyID& keyid, const CBlock& block);
     static bool GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block);
 
     int32_t GetStartDPoSHeight() {return nDposStartHeight;}
-    std::string GetSuperForgerAddress() {return cSuperForgerAddress;}
+    std::string GetSuperForgerPublickey() {return cSuperForgerPublickey;}
 
     uint64_t GetStartTime() {return nDposStartTime;}
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
@@ -113,7 +112,7 @@ private:
     int nBlockIntervalTime;            //seconds
     int nDposStartHeight;
     uint64_t nDposStartTime;
-    std::string cSuperForgerAddress;
+    std::string cSuperForgerPublickey;
     std::string strIrreversibleBlockFileName;
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;

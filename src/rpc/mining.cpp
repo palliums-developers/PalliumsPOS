@@ -938,7 +938,7 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
 
 CCriticalSection cs_mining;
 bool fIsDelegating = false;
-std::string delegateaddress;
+std::string delegatePublicKey;
 CKey delegatekey;
 
 
@@ -955,8 +955,7 @@ void* ThreadDelegating(void *arg)
     CScript::const_iterator it = scriptPubKey.begin();
     GetScriptOp(it,scriptPubKey.end(),op,&vctPublicKey);
 
-    CKeyID keyID = pubkey.GetID();
-    auto addr = EncodeDestination(keyID);
+    CKeyID keyid = pubkey.GetID();
 
     while(!ShutdownRequested() && fIsDelegating){
         do {
@@ -964,7 +963,7 @@ void* ThreadDelegating(void *arg)
             time_t t = time(nullptr);
             DelegateInfo cDelegateInfo;
 
-            if(dPos.IsMining(cDelegateInfo, addr, t) == false){
+            if(!dPos.IsMining(cDelegateInfo, keyid, t)){
                 break;
             }
             std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::DelegateInfoToScript(cDelegateInfo, delegatekey, t), t);
@@ -978,7 +977,7 @@ void* ThreadDelegating(void *arg)
                     LogPrintf("ProcessNewBlock failed");
                 }
 
-                printf("mining addr:%s height:%u time:%lu starttime:%lu...\n", addr.c_str(), chainActive.Height(), t, DPoS::GetInstance().GetStartTime());
+                printf("mining addr:%s height:%u time:%lu starttime:%lu...\n", EncodeDestination(keyid).c_str(), chainActive.Height(), t, DPoS::GetInstance().GetStartTime());
             }
         } while(0);
         sleep(1);
@@ -993,12 +992,12 @@ UniValue startforging(const JSONRPCRequest& request)
 
     if (request.fHelp || request.params.size() > 2)
         throw std::runtime_error(
-            "startforging delegateAddress"
-            "\nstart forging on the sinnga address which have been registered as delegate"
+            "startforging delegatePublicKey"
+            "\nstart forging on the sinnga publickey which have been registered as delegate"
             "\nand receivce enough votes and rank in the top 101.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
-            "1. \"delegateAddress\"     (string, required) The delegate address.\n"
+            "1. \"delegatePublicKey\"     (string, required) The delegate publickey.\n"
             "\nResult:\n"
             "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
             "\nExamples:\n"
@@ -1008,30 +1007,30 @@ UniValue startforging(const JSONRPCRequest& request)
 
     LOCK(cs_mining);
     if(fIsDelegating == false) {
-        delegateaddress = request.params[0].get_str();
-        CTxDestination dest=DecodeDestination(delegateaddress);
-        if (!IsValidDestination(dest)) {
-            LogPrintf("startforging delegateaddress is not a valid keyid");
-            return  "false";
+        delegatePublicKey=request.params[0].get_str();
+        std::vector<unsigned char> data(ParseHex(delegatePublicKey));
+        CPubKey pubKey(data.begin(), data.end());
+        if (!pubKey.IsFullyValid())
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Publickey is not a valid public key");
+
+        auto delegate = pubKey.GetID();
+        if (delegate.IsNull()) {
+            throw JSONRPCError(RPC_TYPE_ERROR, "Publickey does not refer to a key");
         }
-        CKeyID *delegate = boost::get<CKeyID>(&dest);
-        if (!delegate) {
-            LogPrintf("startforging dest is not a valid keyid");
-            return  "false";
-        }
-        if (!pwallet->GetKey(*delegate, delegatekey)) {
-            LogPrintf("startforging address:%s get private_key fail", request.params[0].get_str());
+
+        if (!pwallet->GetKey(delegate, delegatekey)) {
+            LogPrintf("startforging publickey:%s get private_key fail", request.params[0].get_str());
             return "false";
         }
 
-        if(!(delegateaddress == DPoS::GetInstance().GetSuperForgerAddress()) && Vote::GetInstance().GetDelegate(*delegate).empty()) {
-            LogPrintf("startforging address:%s not registe", request.params[0].get_str());
+        if(!(delegatePublicKey == DPoS::GetInstance().GetSuperForgerPublickey()) && Vote::GetInstance().GetDelegate(delegate).empty()) {
+            LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
             return "false";
         }
 
         fIsDelegating = true;
         pthread_t id;
-        pthread_create(&id, NULL, ThreadDelegating, NULL);
+        pthread_create(&id, nullptr, ThreadDelegating, nullptr);
     }
 
     return "true";

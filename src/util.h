@@ -50,7 +50,7 @@ extern CTranslationInterface translationInterface;
 extern const char * const BITCOIN_CONF_FILENAME;
 extern const char * const BITCOIN_PID_FILENAME;
 
-extern std::vector<std::string> vWitnessAddresses;
+extern std::vector<std::string> vWitnessPublickeys;
 
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
