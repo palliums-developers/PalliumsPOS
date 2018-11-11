@@ -12,6 +12,7 @@
 #include "omnicore/errors.h"
 #include "omnicore/omnicore.h"
 #include "omnicore/pending.h"
+#include "txmempool.h"
 #include "omnicore/rpcrequirements.h"
 #include "omnicore/rpcvalues.h"
 #include "omnicore/sp.h"
@@ -1299,7 +1300,8 @@ UniValue omni_sendenablefreezing(const JSONRPCRequest& request)
     RequireExistingProperty(propertyId);
     RequireManagedProperty(propertyId);
     RequireTokenIssuer(fromAddress, propertyId);
-
+    RequireEnableFreezing(propertyId);
+    
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_EnableFreezing(propertyId);
 

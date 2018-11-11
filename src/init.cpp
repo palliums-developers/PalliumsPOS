@@ -1674,15 +1674,17 @@ bool AppInitMain()
 			return InitError(_("Please add txindex=1 to your configuration file manually.\n\nOmni Core will now shutdown."));
 		}
 	}
-	uiInterface.InitMessage(_("Parsing Omni Layer transactions..."));
-	mastercore_init();
-
+	
     // ********************************************************* Step 8: start indexers
 	LogPrintf("********************************************************* Step 8: start indexers\n");
     if (gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = MakeUnique<TxIndex>(nTxIndexCache, false, fReindex);
         g_txindex->Start();
     }
+
+    //parse omni transaction 
+    uiInterface.InitMessage(_("Parsing Omni Layer transactions..."));
+	mastercore_init();
 
 
     // ********************************************************* Step 9: load wallet

@@ -159,3 +159,9 @@ void RequireHeightInChain(int blockHeight)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height is out of range");
     }
 }
+void RequireEnableFreezing(uint32_t propertyId)
+{
+     if(mastercore::isFreezingEnabled(propertyId, mastercore::GetHeight())) { 
+         throw JSONRPCError(int(PKT_ERROR_TOKENS -49), "freezing is already enabled for property"); 
+     }
+}

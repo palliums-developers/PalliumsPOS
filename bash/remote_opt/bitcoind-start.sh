@@ -3,6 +3,8 @@ source ./log.sh
 source ./remote.conf
 source ./comm.sh
 
+enablelog
+
 b_start() {
     remotedir=$1
     while read addr ; do
@@ -12,7 +14,9 @@ b_start() {
 
         logshow ssh -f ${user}"@"${addr} "cd ${remotedir}; ./bitcoind-regtest-start.sh -o -daemon"
                 ssh -f ${user}"@"${addr} "cd ${remotedir}; ./bitcoind-regtest-start.sh -o -daemon"
+
+                sleep 2
     done < rhosts
 }
-
+logshow $workpath
 b_start $workpath
