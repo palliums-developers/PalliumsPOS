@@ -61,7 +61,7 @@ logshow "bitcoind path " $bitcoind_path
 cd $bitcoind_path
 
 logshow ./bitcoind -regtest -port=$BITCOIND_REGPORT -rpcport=$BITCOIND_REGRPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_REGCMDS} ${bitcoin_arg}
-./bitcoind -regtest -port=$BITCOIND_REGPORT -rpcport=$BITCOIND_REGRPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_REGCMDS}  ${bitcoin_arg}
+        ./bitcoind -regtest -port=$BITCOIND_REGPORT -rpcport=$BITCOIND_REGRPCPORT -bind=$target_addr -rpcbind=$target_rpcaddr -rpcallowip=$target_rpcaddr -txindex=1 -datadir=${datadir_path} -conf=${bitcoin_conf} ${BITCOIND_REGCMDS}  ${bitcoin_arg}
 
 
 cd -

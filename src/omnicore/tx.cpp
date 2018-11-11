@@ -880,7 +880,9 @@ int CMPTransaction::interpretPacket()
         return (PKT_ERROR -2);
     }
 
-    LOCK(cs_tally);
+    //jg checking ...
+    //LOCK(cs_tally);
+    LOCK2(cs_main, cs_tally);
 
     if (isAddressFrozen(sender, property)) {
         PrintToLog("%s(): REJECTED: address %s is frozen for property %d\n", __func__, sender, property);
@@ -2160,6 +2162,7 @@ int CMPTransaction::logicMath_EnableFreezing()
         return (PKT_ERROR_TOKENS -43);
     }
 
+    //jg checking  no-check freezing ，multi freezing is freezing too
     if (isFreezingEnabled(property, block)) {
         PrintToLog("%s(): rejected: freezing is already enabled for property %d\n", __func__, property);
         return (PKT_ERROR_TOKENS -49);

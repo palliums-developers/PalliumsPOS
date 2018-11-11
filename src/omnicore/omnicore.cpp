@@ -713,9 +713,9 @@ int mastercore::GetEncodingClass(const CTransaction& tx, int nBlock)
         const CTxOut& output = tx.vout[n];
         std::string strSPB = HexStr(output.scriptPubKey.begin(), output.scriptPubKey.end());
         if (strSPB != strClassAB) { // not an exodus marker
-            if (nBlock < 395000) { // class C not enabled yet, no need to search for marker bytes
+            /*if (nBlock < 395000) { // class C not enabled yet, no need to search for marker bytes
                 continue;
-            } else {
+            } else */{
                 if (strSPB.find(strClassC) != std::string::npos) {
                     examineClosely = true;
                     break;
@@ -1587,6 +1587,7 @@ int mastercore_init()
 {
 //jg checking 
 //LOCK(cs_tally);
+LOCK2(cs_main, cs_tally);
 
     if (mastercoreInitialized) {
         // nothing to do

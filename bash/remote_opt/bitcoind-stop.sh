@@ -13,6 +13,7 @@ b_start() {
 
         logshow ssh -f ${user}"@"${addr} "cd ${remotedir}; ./bitcoind-regtest-stop.sh;exit"
                 ssh -f ${user}"@"${addr} "cd ${remotedir}; ./bitcoind-regtest-stop.sh;exit"
+                sleep 2
     done < rhosts
     exit 0
 }

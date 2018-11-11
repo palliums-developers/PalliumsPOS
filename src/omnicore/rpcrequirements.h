@@ -20,6 +20,7 @@ void RequireSaneReferenceAmount(int64_t amount);
 void RequireSaneDExPaymentWindow(const std::string& address, uint32_t propertyId);
 void RequireSaneDExFee(const std::string& address, uint32_t propertyId);
 void RequireHeightInChain(int blockHeight);
+void RequireEnableFreezing(uint32_t propertyId);
 
 // TODO:
 // Checks for MetaDEx orders for cancel operations
