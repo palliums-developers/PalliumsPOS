@@ -2162,7 +2162,6 @@ int CMPTransaction::logicMath_EnableFreezing()
         return (PKT_ERROR_TOKENS -43);
     }
 
-    //jg checking  no-check freezing ，multi freezing is freezing too
     if (isFreezingEnabled(property, block)) {
         PrintToLog("%s(): rejected: freezing is already enabled for property %d\n", __func__, property);
         return (PKT_ERROR_TOKENS -49);
