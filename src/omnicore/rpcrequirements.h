@@ -21,6 +21,9 @@ void RequireSaneDExPaymentWindow(const std::string& address, uint32_t propertyId
 void RequireSaneDExFee(const std::string& address, uint32_t propertyId);
 void RequireHeightInChain(int blockHeight);
 void RequireEnableFreezing(uint32_t propertyId);
+void RequireDisableFreezing(uint32_t propertyId);
+void RequireFreeze(const std::string &receiver, uint32_t propertyId);
+void RequireUnFreeze(const std::string &receiver, uint32_t propertyId);
 
 // TODO:
 // Checks for MetaDEx orders for cancel operations

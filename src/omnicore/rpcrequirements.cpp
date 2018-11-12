@@ -162,6 +162,37 @@ void RequireHeightInChain(int blockHeight)
 void RequireEnableFreezing(uint32_t propertyId)
 {
      if(mastercore::isFreezingEnabled(propertyId, mastercore::GetHeight())) { 
-         throw JSONRPCError(int(PKT_ERROR_TOKENS -49), "freezing is already enabled for property"); 
+         throw JSONRPCError(int(PKT_ERROR_TOKENS - 49), "freezing is already enabled for property"); 
+     }
+}
+void RequireDisableFreezing(uint32_t propertyId)
+{
+     if(!mastercore::isFreezingEnabled(propertyId, mastercore::GetHeight())) { 
+         throw JSONRPCError(int(PKT_ERROR_TOKENS - 47), "freezing is not enabled for property"); 
+     }
+}
+void RequireFreeze(const std::string &receiver, uint32_t propertyId)
+{
+     if(!mastercore::isFreezingEnabled(propertyId, mastercore::GetHeight())) { 
+         throw JSONRPCError(int(PKT_ERROR_TOKENS - 47), "freezing is not enabled for property"); 
+     }
+
+    if(mastercore::isAddressFrozen(receiver, propertyId))
+    {
+        std::ostringstream ss;
+        ss  << "address " << receiver << " is frozen for property " << propertyId ;
+        throw JSONRPCError(int(PKT_ERROR_TOKENS - 48), ss.str()); 
+    }
+}
+void RequireUnFreeze(const std::string &receiver, uint32_t propertyId)
+{
+     if(!mastercore::isFreezingEnabled(propertyId, mastercore::GetHeight())) { 
+         throw JSONRPCError(int(PKT_ERROR_TOKENS - 47), "freezing is not enabled for property"); 
+     }
+     if(!mastercore::isAddressFrozen(receiver, propertyId))
+     {
+         std::ostringstream ss;
+         ss  << "address " << receiver << " is not frozen for property " << propertyId ;
+         throw JSONRPCError(int(PKT_ERROR_TOKENS - 48), ss.str());
      }
 }

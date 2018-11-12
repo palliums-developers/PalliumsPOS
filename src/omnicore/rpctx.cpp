@@ -1354,6 +1354,7 @@ UniValue omni_senddisablefreezing(const JSONRPCRequest& request)
     RequireExistingProperty(propertyId);
     RequireManagedProperty(propertyId);
     RequireTokenIssuer(fromAddress, propertyId);
+    RequireDisableFreezing(propertyId);
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_DisableFreezing(propertyId);
@@ -1407,6 +1408,7 @@ UniValue omni_sendfreeze(const JSONRPCRequest& request)
     RequireExistingProperty(propertyId);
     RequireManagedProperty(propertyId);
     RequireTokenIssuer(fromAddress, propertyId);
+    RequireFreeze(fromAddress, propertyId);
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_FreezeTokens(propertyId, amount, refAddress);
@@ -1461,6 +1463,7 @@ UniValue omni_sendunfreeze(const JSONRPCRequest& request)
     RequireExistingProperty(propertyId);
     RequireManagedProperty(propertyId);
     RequireTokenIssuer(fromAddress, propertyId);
+    RequireUnFreeze(fromAddress, propertyId);
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_UnfreezeTokens(propertyId, amount, refAddress);
