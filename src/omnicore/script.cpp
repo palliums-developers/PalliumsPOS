@@ -7,6 +7,7 @@
 #include "script/standard.h"
 #include "serialize.h"
 #include "utilstrencodings.h"
+#include "policy/policy.h"
 
 #include <boost/foreach.hpp>
 
