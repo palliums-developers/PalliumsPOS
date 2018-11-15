@@ -1,5 +1,6 @@
 *.tar.gz
 *.local
+*.bak
 tags
 *.exe
 src/bitcoin

@@ -158,7 +158,8 @@ bool CheckActivationAuthorization(const std::string& sender)
       "16oDZYCspsczfgKXVj3xyvsxH21NpEj94F" // Adam Chamely - adam@omni.foundation - Project maintainer, developer
     ],
     */
-    whitelisted.insert("3Fc5gWzEQh1YGeqVXH6E4GDEGgbZJREJQ3");
+    //jg checked
+    //whitelisted.insert("3Fc5gWzEQh1YGeqVXH6E4GDEGgbZJREJQ3");
 
     // Alternatively: 3 out of 3 signatures required
     /*
@@ -229,7 +230,8 @@ bool CheckDeactivationAuthorization(const std::string& sender)
       "16oDZYCspsczfgKXVj3xyvsxH21NpEj94F" // Adam Chamely - adam@omni.foundation - Project maintainer, developer
     ],
     */
-    whitelisted.insert("34kwkVRSvFVEoUwcQSgpQ4ZUasuZ54DJLD");
+    //jg checked
+    //whitelisted.insert("34kwkVRSvFVEoUwcQSgpQ4ZUasuZ54DJLD");
 
     // Testnet / Regtest
     // use -omniactivationallowsender for testing
