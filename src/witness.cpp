@@ -10,75 +10,6 @@
 
 bool fUseIrreversibleBlock = true;
 
-static Vote vote;
-Vote& Vote::GetInstance()
-{
-    return vote;
-}
-
-CKeyID localKeyID;
-
-std::vector<Delegate> Vote::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum)
-{
-    std::shared_ptr<CWallet> const wallet = GetWallet("");
-    CWallet* const pwallet = wallet.get();
-    std::vector<Delegate> result;
-    std::set<CKeyID> delegates;
-
-    for(auto &publickey:vWitnessPublickeys)
-    {
-        std::vector<unsigned char> data(ParseHex(publickey));
-        CPubKey pubKey(data.begin(), data.end());
-        if (!pubKey.IsFullyValid())
-            LogPrintf("Pubkey % is not a valid public key",publickey);
-        auto keyid = pubKey.GetID();
-        if (keyid.IsNull()) {
-            continue;
-        }
-        delegates.insert(keyid);
-        CKey vchSecret;
-        if (!pwallet->GetKey(keyid, vchSecret)) {
-            continue;
-        }
-        localKeyID=keyid;
-    }
-
-    uint64_t vote_num=delegates.size()+nMinHoldBalance;
-    for(auto it = delegates.rbegin(); it != delegates.rend(); ++it)
-    {
-        if(result.size() >= nDelegateNum) {
-            break;
-        }
-        //TODO:vote num auto detect
-        result.push_back(Delegate(*it,vote_num--));
-    }
-    return result;
-}
-
-void Vote::DeleteInvalidVote(uint64_t height)
-{
-    //TODO:complete this function
-    return;
-}
-
-std::string Vote::GetDelegate(const CKeyID &keyid)
-{
-    for(auto &publickey:vWitnessPublickeys)
-    {
-        std::vector<unsigned char> data(ParseHex(publickey));
-        CPubKey pubKey(data.begin(), data.end());
-        if (!pubKey.IsFullyValid())
-            LogPrintf("Pubkey % is not a valid public key",publickey);
-        auto kid = pubKey.GetID();
-        if (kid.IsNull()) {
-            continue;
-        }
-        if(kid==keyid)
-            return publickey;
-    }
-    return std::string();
-}
-
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
 typedef boost::unique_lock<boost::shared_mutex> write_lock;
 
@@ -98,19 +29,19 @@ void DPoS::Init()
 {
     nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
-        cSuperForgerPublickey = "0294c443187ab6442621b3a7c1813902318bdefb2a3928ad38ced8a266766576de";
+        cSuperForgerPublickey = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
-        nDposStartHeight = 10;
+        nDposStartHeight = 50;
     } else {
-        cSuperForgerPublickey = "0294c443187ab6442621b3a7c1813902318bdefb2a3928ad38ced8a266766576de";
+        cSuperForgerPublickey = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
-        nDposStartHeight = 10;
+        nDposStartHeight = 50;
     }
 
     strIrreversibleBlockFileName = (GetDataDir() / "dpos" / "irreversible_block.dat").string();
@@ -209,7 +140,7 @@ DelegateInfo DPoS::GetNextDelegates(int64_t t)
 {
     uint64_t nMinHoldBalance = 500000000000;
 
-    std::vector<Delegate> delegates = Vote::GetInstance().GetTopDelegateInfo(nMinHoldBalance, nMaxDelegateNumber);
+    std::vector<Delegate> delegates = Selector::GetInstance().GetTopDelegateInfo(nMinHoldBalance, nMaxDelegateNumber);
 
     LogPrintf("DPoS: GetNextDelegates start\n");
     for(auto i : delegates)
@@ -314,7 +245,7 @@ bool DPoS::CheckCoinbase(const CTransaction& tx, time_t t, int64_t height)
         CTxDestination dest;
         if (ExtractDestination(tx.vout[0].scriptPubKey, dest) ) {
             DelegateInfo cDelegateInfo;
-            ret = ScriptToDelegateInfo(cDelegateInfo, t, tx.vout[1].scriptPubKey, &dest, true);
+            ret = VRFScriptToDelegateInfo(cDelegateInfo, t, tx.vout[1].scriptPubKey, &dest, true);
         }
     }
 
@@ -324,9 +255,94 @@ bool DPoS::CheckCoinbase(const CTransaction& tx, time_t t, int64_t height)
     return ret;
 }
 
-//OP_RETURN VECTOR<UNSIGNED CHAR>
-//OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
-CScript DPoS::DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t)
+////OP_RETURN VECTOR<UNSIGNED CHAR>
+////OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
+//CScript DPoS::DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t)
+//{
+//    const std::vector<Delegate>& delegates = cDelegateInfo.delegates;
+
+//    int nDataLen = 1 + delegates.size() * 20;
+//    std::vector<unsigned char> data;
+
+//    if(cDelegateInfo.delegates.empty() == false) {
+//        data.resize(nDataLen);
+//        data[0] = 0x7;
+
+//        unsigned char* pData = &data[1];
+//        for(unsigned int i =0; i < delegates.size(); ++i) {
+//            memcpy(pData, delegates[i].keyid.begin(), 20);
+//            pData += 20;
+//        }
+//    }
+
+//    std::vector<unsigned char> vchSig;
+//    std::string ts = std::to_string(t);
+//    delegatekey.Sign(Hash(ts.begin(), ts.end()), vchSig);
+
+//    CScript script;
+//    if(cDelegateInfo.delegates.empty() == false) {
+//        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig << data;
+//    } else {
+//        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig;
+//    }
+//    return script;
+//}
+
+////OP_RETURN VECTOR<UNSIGNED CHAR>
+////OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
+//bool DPoS::ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck)
+//{
+//    opcodetype op;
+//    std::vector<unsigned char> data;
+//    CScript::const_iterator it = script.begin();
+//    script.GetOp(it, op);
+//    if(op == OP_RETURN) {
+//        std::vector<unsigned char> vctPublicKey;
+//        if(GetScriptOp(it,script.end(), op, &vctPublicKey) == false) {
+//            return false;
+//        }
+
+//        CPubKey pubkey(vctPublicKey);
+
+//        std::vector<unsigned char> vctSig;
+//        if(GetScriptOp(it,script.end(), op, &vctSig) == false) {
+//            return false;
+//        }
+
+//        std::string sh = std::to_string(t);
+//        auto hash = Hash(sh.begin(), sh.end());
+
+//        if(fCheck) {
+//            if(pubkey.Verify(hash, vctSig) == false) {
+//                return false;
+//            }
+//        }
+
+//        if(paddress!=nullptr) {
+//            auto keyid = boost::get<CKeyID>(paddress);
+//            if(pubkey.GetID() != *keyid) {
+//                return false;
+//            }
+//        }
+
+//        if(GetScriptOp(it,script.end(), op, &data)) {
+//            if((data.size() - (1)) % (20) == 0) {
+//                unsigned char* pData = &data[1];
+//                uint32_t nDelegateNum = (data.size() - (1)) / (20);
+//                for(unsigned int i =0; i < nDelegateNum; ++i) {
+//                    std::vector<unsigned char> vct(pData, pData + 20);
+//                    cDelegateInfo.delegates.push_back(Delegate(CKeyID(uint160(vct)), 0));
+//                    pData += 20;
+//                }
+
+//                return true;
+//            }
+//        }
+//    }
+//    return true;
+//}
+
+CScript DPoS::VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t)
 {
     const std::vector<Delegate>& delegates = cDelegateInfo.delegates;
 
@@ -357,9 +373,8 @@ CScript DPoS::DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey
     return script;
 }
 
-//OP_RETURN VECTOR<UNSIGNED CHAR>
-//OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
-bool DPoS::ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck)
+
+bool DPoS::VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck)
 {
     opcodetype op;
     std::vector<unsigned char> data;
@@ -443,7 +458,7 @@ bool DPoS::GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block)
         }
 
         auto script = tx->vout[1].scriptPubKey;
-        ret = ScriptToDelegateInfo(cDelegateInfo, block.nTime, script, nullptr, false);
+        ret = VRFScriptToDelegateInfo(cDelegateInfo, block.nTime, script, nullptr, false);
     }
 
     return ret;
@@ -786,5 +801,5 @@ void DPoS::AddIrreversibleBlock(int64_t height, uint256 hash)
 
     cIrreversibleBlockInfo.mapHeightHash.insert(std::make_pair(height, hash));
 
-    Vote::GetInstance().DeleteInvalidVote(height);
+    Selector::GetInstance().DeleteInvalidVote(height);
 }

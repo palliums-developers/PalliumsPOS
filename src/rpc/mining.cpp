@@ -965,7 +965,7 @@ void* ThreadDelegating(void *arg)
             if(!dPos.IsMining(cDelegateInfo, keyid, t)){
                 break;
             }
-            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::DelegateInfoToScript(cDelegateInfo, delegatekey, t), t);
+            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, delegatekey, t), t);
             if(pblock) {
                 unsigned int extraNonce = 0;
                 {
@@ -1024,7 +1024,7 @@ UniValue startforging(const JSONRPCRequest& request)
             return "false";
         }
 
-        if(!(delegatePublicKey == DPoS::GetInstance().GetSuperForgerPublickey()) && Vote::GetInstance().GetDelegate(delegate).empty()) {
+        if(!(delegatePublicKey == DPoS::GetInstance().GetSuperForgerPublickey()) && Selector::GetInstance().GetDelegate(delegate).empty()) {
             LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
             return "false";
         }

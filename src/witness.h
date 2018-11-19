@@ -11,6 +11,7 @@
 #include <chain.h>
 #include <key_io.h>
 #include <rpc/server.h>
+#include <selector.h>
 
 extern bool fUseIrreversibleBlock;
 
@@ -40,17 +41,6 @@ struct IrreversibleBlockInfo{
 };
 
 
-class Vote{
-public:
-    static Vote& GetInstance();
-    std::vector<Delegate> GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum);
-    void DeleteInvalidVote(uint64_t height);
-    CKeyID GetDelegate(const std::string& name);
-    std::string GetDelegate(const CKeyID& keyid);
-private:
-    boost::shared_mutex lockMapHashHeightInvalidVote;
-};
-
 class DPoS{
 public:
     DPoS() { nDposStartTime = 0;}
@@ -74,8 +64,10 @@ public:
     static bool DataToDelegate(DelegateInfo& cDelegateInfo, const std::string& data);
     static std::string DelegateToData(const DelegateInfo& cDelegateInfo);
 
-    static bool ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
-    static CScript DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
+//    static bool ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
+    static bool VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
+//    static CScript DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
+    static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
 
     static bool GetBlockForgerKeyID(CKeyID& keyid, const CBlock& block);
     static bool GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block);
