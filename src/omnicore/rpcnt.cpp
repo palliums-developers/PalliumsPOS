@@ -27,6 +27,7 @@
 #include <string>
 
 #include "rpcnt.h"
+#include "nodetoken.h"
 
 using std::runtime_error;
 using namespace mastercore;
@@ -35,8 +36,20 @@ extern CCriticalSection cs_main;
 
 extern UniValue omni_sendissuancefixed(const JSONRPCRequest& request);
 
+extern std::shared_ptr<CWallet> GetWalletForJSONRPCRequest(const JSONRPCRequest& request);
+
 UniValue sinnga_sendissuancefixed(const JSONRPCRequest &request)
 {
+
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    CWallet* const pwallet = wallet.get();
+
+    CNodeToken nodeToken;
+
+    uint32_t nId = 2147483653;
+
+    nodeToken.GetNodeTokenerPubkey(nId, pwallet);
+
     return omni_sendissuancefixed(request);
 }
 
