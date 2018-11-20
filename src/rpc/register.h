@@ -29,6 +29,8 @@ extern void RegisterOmniPayloadCreationRPCCommands(CRPCTable &tableRPC);
 /** Register Omni raw transaction RPC commands */
 extern void RegisterOmniRawTransactionRPCCommands(CRPCTable &tableRPC);
 
+extern void RegisterSinngaTransactionCreationRPCCommands(CRPCTable &tableRPC);
+
 static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 {
     RegisterBlockchainRPCCommands(t);
@@ -42,6 +44,8 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
     RegisterOmniTransactionCreationRPCCommands(t);
 	RegisterOmniPayloadCreationRPCCommands(t);
 	RegisterOmniRawTransactionRPCCommands(t);
+
+    RegisterSinngaTransactionCreationRPCCommands(t);
 }
 
 #endif // BITCOIN_RPC_REGISTER_H

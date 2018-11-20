@@ -280,6 +280,8 @@ netmessagemaker.h
 noui.cpp
 noui.h
 obj/build.h
+omnicore/NodeToken.cpp
+omnicore/NodeToken.h
 omnicore/activation.cpp
 omnicore/activation.h
 omnicore/consensushash.cpp
@@ -313,6 +315,8 @@ omnicore/log.cpp
 omnicore/log.h
 omnicore/mdex.cpp
 omnicore/mdex.h
+omnicore/nodetoken.cpp
+omnicore/nodetoken.h
 omnicore/notifications.cpp
 omnicore/notifications.h
 omnicore/omnicore.cpp
@@ -329,6 +333,8 @@ omnicore/rpc.cpp
 omnicore/rpc.h
 omnicore/rpcmbstring.cpp
 omnicore/rpcmbstring.h
+omnicore/rpcnt.cpp
+omnicore/rpcnt.h
 omnicore/rpcpayload.cpp
 omnicore/rpcpayload.h
 omnicore/rpcrawtx.cpp
