@@ -938,9 +938,9 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
 
 CCriticalSection cs_mining;
 bool fIsDelegating = false;
-std::string delegatePublicKey;
 CKey delegatekey;
-
+std::vector<unsigned char> delegateVrfPK;
+std::vector<unsigned char> delegateVrfSK;
 
 void* ThreadDelegating(void *arg)
 {
@@ -1007,6 +1007,7 @@ UniValue startforging(const JSONRPCRequest& request)
     );
 
     LOCK(cs_mining);
+    std::string delegatePublicKey;
     if(fIsDelegating == false) {
         delegatePublicKey=request.params[0].get_str();
         std::vector<unsigned char> data(ParseHex(delegatePublicKey));
@@ -1023,8 +1024,12 @@ UniValue startforging(const JSONRPCRequest& request)
             LogPrintf("startforging publickey:%s get private_key fail", request.params[0].get_str());
             return "false";
         }
-
-        if(!(delegatePublicKey == DPoS::GetInstance().GetSuperForgerPublickey()) && Selector::GetInstance().GetDelegate(delegate).empty()) {
+        delegateVrfPK.resize(32);
+        delegateVrfSK.resize(64);
+        Selector::GetInstance().GetVrfKeypairFromPrivKey(&delegateVrfPK[0],&delegateVrfSK[0],delegatekey.begin());
+        std::string strDelegateVrfPK;
+        strDelegateVrfPK.insert(strDelegateVrfPK.begin(),delegateVrfPK.begin(),delegateVrfPK.end());
+        if(!(strDelegateVrfPK == DPoS::GetInstance().GetSuperForgerPK()) && Selector::GetInstance().GetDelegate(delegateVrfPK).empty()) {
             LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
             return "false";
         }

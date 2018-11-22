@@ -6,7 +6,7 @@
 #include <util.h>
 #include <script/script.h>
 #include <wallet/wallet.h>
-
+#include <vrf/crypto_vrf.h>
 
 bool fUseIrreversibleBlock = true;
 
@@ -29,14 +29,14 @@ void DPoS::Init()
 {
     nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
-        cSuperForgerPublickey = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
+        cSuperForgerPK = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
         nBlockIntervalTime = BLOCK_INTERVAL_TIME;
         nDposStartHeight = 50;
     } else {
-        cSuperForgerPublickey = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
+        cSuperForgerPK = "03a1d95c3b247d7cef3cbf05c57e13762cfe3e6c7c51ac2b2320223695a65037f4";
         gDPoS.nDposStartTime = 0;
 
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
@@ -62,27 +62,13 @@ DPoS& DPoS::GetInstance()
     return gDPoS;
 }
 
-bool GetKeyID(const std::string& publickey,CKeyID& keyID)
-{
-    std::vector<unsigned char> data(ParseHex(publickey));
-    CPubKey pubKey(data.begin(), data.end());
-    if (!pubKey.IsFullyValid())
-        LogPrintf("Pubkey % is not a valid public key",publickey);
-    auto keyid = pubKey.GetID();
-    if (keyid.IsNull()) {
-        return false;
-    }
-    keyID=keyid;
-    return true;
-}
-
-bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
+bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> vrfpk, time_t t)
 {
     CBlockIndex* pBlockIndex = chainActive.Tip();
     if(pBlockIndex->nHeight < nDposStartHeight - 1) {
-        CKeyID kid;
-        GetKeyID(cSuperForgerPublickey,kid);
-        if(keyid == kid) {
+        std::vector<unsigned char> pk(cSuperForgerPK.size());
+        copy(cSuperForgerPK.begin(),cSuperForgerPK.end(),pk.begin());
+        if(pk == vrfpk) {
             static time_t tLast = 0;
             if(t < tLast + nBlockIntervalTime) {
                 return false;
@@ -102,7 +88,7 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
 
     if(pBlockIndex->nHeight == nDposStartHeight - 1) {
         cDelegateInfo = DPoS::GetNextDelegates(t);
-        if(cDelegateInfo.delegates[nCurrentDelegateIndex].keyid == keyid) {
+        if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vrfpk) {
             return true;
         } else {
             return false;
@@ -111,7 +97,7 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
 
     if(nCurrentLoopIndex > nPrevLoopIndex) {
         cDelegateInfo = DPoS::GetNextDelegates(t);
-        if(cDelegateInfo.delegates[nCurrentDelegateIndex].keyid == keyid) {
+        if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vrfpk) {
             return true;
         } else {
             return false;
@@ -121,7 +107,7 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
         if(GetBlockDelegates(cCurrentDelegateInfo, pBlockIndex)) {
             if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
                 return false;
-            } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].keyid == keyid) {
+            } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vrfpk) {
                 return true;
             } else {
                 return false;
@@ -136,56 +122,29 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const CKeyID& keyid, time_t t)
     return false;
 }
 
-DelegateInfo DPoS::GetNextDelegates(int64_t t)
+DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> vrfValue)
 {
     uint64_t nMinHoldBalance = 500000000000;
 
-    std::vector<Delegate> delegates = Selector::GetInstance().GetTopDelegateInfo(nMinHoldBalance, nMaxDelegateNumber);
+    std::vector<Delegate> delegates = Selector::GetInstance().GetTopDelegateInfo(nMinHoldBalance, nMaxDelegateNumber,vrfValue);
 
     LogPrintf("DPoS: GetNextDelegates start\n");
     for(auto i : delegates)
-        LogPrintf("DPoS: delegate %s %lu\n", EncodeDestination(i.keyid), i.votes);
+        LogPrintf("DPoS: delegate %s %lu\n", std::string((const char*)(&(*i.vrfpk.begin())),i.vrfpk.size()), i.votes);
     LogPrintf("DPoS: GetNextDelegates end\n");
 
     Delegate delegate;
-    GetKeyID(cSuperForgerPublickey,delegate.keyid);
+    delegate.vrfpk.resize(cSuperForgerPK.size());
+    copy(cSuperForgerPK.begin(),cSuperForgerPK.end(),delegate.vrfpk.begin());
     delegate.votes = 7;
     delegates.insert(delegates.begin(), delegate);
 
     delegates.resize(nMaxDelegateNumber);
 
     DelegateInfo cDelegateInfo;
-    cDelegateInfo.delegates = SortDelegate(delegates, t);
+    cDelegateInfo.delegates = delegates;
 
     return cDelegateInfo;
-}
-
-std::vector<char> GetRand(unsigned num, unsigned int seed)
-{
-    std::vector<char> r;
-    std::vector<char> s(num, -1);
-
-    while(r.size() < num) {
-        uint64_t v;
-        v = rand_r(&seed);
-        v %= num;
-        if(s[v] < 0) {
-            s[v] = 1;
-            r.push_back(v);
-        }
-    }
-    return r;
-}
-
-std::vector<Delegate> DPoS::SortDelegate(const std::vector<Delegate>& delegates, uint64_t t)
-{
-    std::vector<Delegate> result;
-    unsigned int seed = (unsigned int)t;
-    std::vector<char>&& r = GetRand(delegates.size(), seed);
-    for(auto& i : r) {
-        result.push_back(delegates[i]);
-    }
-    return result;
 }
 
 bool DPoS::GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex)
@@ -238,15 +197,12 @@ uint32_t DPoS::GetDelegateIndex(uint64_t time)
     }
 }
 
-bool DPoS::CheckCoinbase(const CTransaction& tx, time_t t, int64_t height)
+bool DPoS::CheckCoinbase(const CTransaction& tx, const CBlock& block)
 {
     bool ret = false;
     if(tx.vout.size() == 3) {
-        CTxDestination dest;
-        if (ExtractDestination(tx.vout[0].scriptPubKey, dest) ) {
-            DelegateInfo cDelegateInfo;
-            ret = VRFScriptToDelegateInfo(cDelegateInfo, t, tx.vout[1].scriptPubKey, &dest, true);
-        }
+        DelegateInfo cDelegateInfo;
+        ret = VRFScriptToDelegateInfo(cDelegateInfo, tx.vout[1].scriptPubKey);
     }
 
     if(ret == false) {
@@ -255,98 +211,11 @@ bool DPoS::CheckCoinbase(const CTransaction& tx, time_t t, int64_t height)
     return ret;
 }
 
-////OP_RETURN VECTOR<UNSIGNED CHAR>
-////OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
-//CScript DPoS::DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t)
-//{
-//    const std::vector<Delegate>& delegates = cDelegateInfo.delegates;
-
-//    int nDataLen = 1 + delegates.size() * 20;
-//    std::vector<unsigned char> data;
-
-//    if(cDelegateInfo.delegates.empty() == false) {
-//        data.resize(nDataLen);
-//        data[0] = 0x7;
-
-//        unsigned char* pData = &data[1];
-//        for(unsigned int i =0; i < delegates.size(); ++i) {
-//            memcpy(pData, delegates[i].keyid.begin(), 20);
-//            pData += 20;
-//        }
-//    }
-
-//    std::vector<unsigned char> vchSig;
-//    std::string ts = std::to_string(t);
-//    delegatekey.Sign(Hash(ts.begin(), ts.end()), vchSig);
-
-//    CScript script;
-//    if(cDelegateInfo.delegates.empty() == false) {
-//        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig << data;
-//    } else {
-//        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig;
-//    }
-//    return script;
-//}
-
-////OP_RETURN VECTOR<UNSIGNED CHAR>
-////OP_RETURN PUBKEY SIG(t) DELEGATE_IDS
-//bool DPoS::ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck)
-//{
-//    opcodetype op;
-//    std::vector<unsigned char> data;
-//    CScript::const_iterator it = script.begin();
-//    script.GetOp(it, op);
-//    if(op == OP_RETURN) {
-//        std::vector<unsigned char> vctPublicKey;
-//        if(GetScriptOp(it,script.end(), op, &vctPublicKey) == false) {
-//            return false;
-//        }
-
-//        CPubKey pubkey(vctPublicKey);
-
-//        std::vector<unsigned char> vctSig;
-//        if(GetScriptOp(it,script.end(), op, &vctSig) == false) {
-//            return false;
-//        }
-
-//        std::string sh = std::to_string(t);
-//        auto hash = Hash(sh.begin(), sh.end());
-
-//        if(fCheck) {
-//            if(pubkey.Verify(hash, vctSig) == false) {
-//                return false;
-//            }
-//        }
-
-//        if(paddress!=nullptr) {
-//            auto keyid = boost::get<CKeyID>(paddress);
-//            if(pubkey.GetID() != *keyid) {
-//                return false;
-//            }
-//        }
-
-//        if(GetScriptOp(it,script.end(), op, &data)) {
-//            if((data.size() - (1)) % (20) == 0) {
-//                unsigned char* pData = &data[1];
-//                uint32_t nDelegateNum = (data.size() - (1)) / (20);
-//                for(unsigned int i =0; i < nDelegateNum; ++i) {
-//                    std::vector<unsigned char> vct(pData, pData + 20);
-//                    cDelegateInfo.delegates.push_back(Delegate(CKeyID(uint160(vct)), 0));
-//                    pData += 20;
-//                }
-
-//                return true;
-//            }
-//        }
-//    }
-//    return true;
-//}
-
-CScript DPoS::VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t)
+CScript DPoS::VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& vpk, const std::vector<unsigned char>& vsk)
 {
     const std::vector<Delegate>& delegates = cDelegateInfo.delegates;
 
-    int nDataLen = 1 + delegates.size() * 20;
+    int nDataLen = 1 + delegates.size() * 32;
     std::vector<unsigned char> data;
 
     if(cDelegateInfo.delegates.empty() == false) {
@@ -355,68 +224,57 @@ CScript DPoS::VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const C
 
         unsigned char* pData = &data[1];
         for(unsigned int i =0; i < delegates.size(); ++i) {
-            memcpy(pData, delegates[i].keyid.begin(), 20);
-            pData += 20;
+            memcpy(pData, &delegates[i].vrfpk[0], 32);
+            pData += 32;
         }
     }
-
-    std::vector<unsigned char> vchSig;
-    std::string ts = std::to_string(t);
-    delegatekey.Sign(Hash(ts.begin(), ts.end()), vchSig);
-
+    std::vector<unsigned char> vrf_value;
+    LOCK(cs_main);
+    CBlockIndex* pBlockIndex = chainActive.Tip();
+    std::vector<unsigned char> msg;
+    if(pBlockIndex){
+        CBlock block;
+        if (ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())) {
+            MakeVrfMessage(block,msg);
+        }
+    }
+    std::vector<unsigned char> proof;
+    crypto_vrf_prove(&proof[0], &vsk[0], (const unsigned char*) &msg[0], msg.size());
     CScript script;
     if(cDelegateInfo.delegates.empty() == false) {
-        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig << data;
+        script << OP_RETURN << vpk << proof << data;
     } else {
-        script << OP_RETURN << ToByteVector(delegatekey.GetPubKey()) << vchSig;
+        script << OP_RETURN << vpk << proof;
     }
     return script;
 }
 
 
-bool DPoS::VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck)
+bool DPoS::VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, const CScript& script)
 {
     opcodetype op;
     std::vector<unsigned char> data;
     CScript::const_iterator it = script.begin();
     script.GetOp(it, op);
     if(op == OP_RETURN) {
-        std::vector<unsigned char> vctPublicKey;
-        if(GetScriptOp(it,script.end(), op, &vctPublicKey) == false) {
+        std::vector<unsigned char> pk;
+        if(GetScriptOp(it,script.end(), op, &pk) == false) {
             return false;
         }
 
-        CPubKey pubkey(vctPublicKey);
-
-        std::vector<unsigned char> vctSig;
-        if(GetScriptOp(it,script.end(), op, &vctSig) == false) {
+        cDelegateInfo.vrfProof.resize(80);
+        if(GetScriptOp(it,script.end(), op, &cDelegateInfo.vrfProof) == false) {
             return false;
-        }
-
-        std::string sh = std::to_string(t);
-        auto hash = Hash(sh.begin(), sh.end());
-
-        if(fCheck) {
-            if(pubkey.Verify(hash, vctSig) == false) {
-                return false;
-            }
-        }
-
-        if(paddress!=nullptr) {
-            auto keyid = boost::get<CKeyID>(paddress);
-            if(pubkey.GetID() != *keyid) {
-                return false;
-            }
         }
 
         if(GetScriptOp(it,script.end(), op, &data)) {
-            if((data.size() - (1)) % (20) == 0) {
+            if((data.size() - (1)) % (32) == 0) {
                 unsigned char* pData = &data[1];
-                uint32_t nDelegateNum = (data.size() - (1)) / (20);
+                uint32_t nDelegateNum = (data.size() - (1)) / (32);
                 for(unsigned int i =0; i < nDelegateNum; ++i) {
-                    std::vector<unsigned char> vct(pData, pData + 20);
-                    cDelegateInfo.delegates.push_back(Delegate(CKeyID(uint160(vct)), 0));
-                    pData += 20;
+                    std::vector<unsigned char> vct(pData, pData + 32);
+                    cDelegateInfo.delegates.push_back(Delegate(vct, 0));
+                    pData += 32;
                 }
 
                 return true;
@@ -426,18 +284,14 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, cons
     return true;
 }
 
-bool DPoS::GetBlockForgerKeyID(CKeyID& keyid, const CBlock& block)
+bool DPoS::GetBlockForgerPK(std::vector<unsigned char>& pk, const CBlock& block)
 {
     auto& tx = block.vtx[0];
     if(tx->IsCoinBase() && tx->vout.size() == 3) {
-        CTxDestination dest;
-        if(ExtractDestination(tx->vout[0].scriptPubKey, dest)) {
-            if (auto id = boost::get<CKeyID>(&dest)) {
-                if(!id->IsNull()){
-                    keyid = *id;
-                    return true;
-                }
-            }
+        DelegateInfo cDelegateInfo;
+        if(VRFScriptToDelegateInfo(cDelegateInfo, tx->vout[1].scriptPubKey)){
+            pk=cDelegateInfo.vrfpk;
+            return true;
         }
     }
     return false;
@@ -449,18 +303,9 @@ bool DPoS::GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block)
 
     auto tx = block.vtx[0];
     if(tx->IsCoinBase() && tx->vout.size() == 3) {
-        opcodetype op;
-        std::vector<unsigned char> vctData;
-        {
-            CScript::const_iterator it = tx->vout[0].scriptPubKey.begin();
-            auto& script = tx->vout[0].scriptPubKey;
-            GetScriptOp(it,script.end(), op, &vctData);
-        }
-
         auto script = tx->vout[1].scriptPubKey;
-        ret = VRFScriptToDelegateInfo(cDelegateInfo, block.nTime, script, nullptr, false);
+        ret = VRFScriptToDelegateInfo(cDelegateInfo, script);
     }
-
     return ret;
 }
 
@@ -476,7 +321,7 @@ bool DPoS::CheckBlockDelegate(const CBlock& block)
     DelegateInfo cNextDelegateInfo = GetNextDelegates(block.nTime);
     if(cDelegateInfo.delegates.size() == cNextDelegateInfo.delegates.size()) {
         for(unsigned int i =0; i < cDelegateInfo.delegates.size(); ++i) {
-            if(cDelegateInfo.delegates[i].keyid != cNextDelegateInfo.delegates[i].keyid) {
+            if(cDelegateInfo.delegates[i].vrfpk != cNextDelegateInfo.delegates[i].vrfpk) {
                 ret = false;
                 break;
             }
@@ -485,11 +330,11 @@ bool DPoS::CheckBlockDelegate(const CBlock& block)
 
     if(ret == false) {
         for(unsigned int i =0; i < cDelegateInfo.delegates.size(); ++i) {
-            LogPrintf("CheckBlockDelegate BlockDelegate[%u]: %s\n", i, EncodeDestination(cDelegateInfo.delegates[i].keyid).c_str());
+            LogPrintf("CheckBlockDelegate BlockDelegate[%u]: %s\n", i, &cDelegateInfo.delegates[i].vrfpk[0]);
         }
 
         for(unsigned int i =0; i < cNextDelegateInfo.delegates.size(); ++i) {
-            LogPrintf("CheckBlockDelegate NextBlockDelegate[%u]: %s %llu\n", i, EncodeDestination(cNextDelegateInfo.delegates[i].keyid).c_str(), cNextDelegateInfo.delegates[i].votes);
+            LogPrintf("CheckBlockDelegate NextBlockDelegate[%u]: %s %llu\n", i, &cNextDelegateInfo.delegates[i].vrfpk[0], cNextDelegateInfo.delegates[i].votes);
         }
     }
 
@@ -547,7 +392,7 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
 
     int64_t nBlockHeight = pPrevBlockIndex->nHeight + 1;
 
-    if(CheckCoinbase(*block.vtx[0], block.nTime, nBlockHeight) == false) {
+    if(CheckCoinbase(*block.vtx[0], block) == false) {
         LogPrintf("CheckBlock CheckCoinbase error\n");
         return false;
     }
@@ -557,11 +402,12 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     }
 
     if(nBlockHeight < nDposStartHeight) {
-        CKeyID kid,superForgerkid;
-        if(GetBlockForgerKeyID(kid,block) && GetKeyID(cSuperForgerPublickey,superForgerkid) && kid == superForgerkid) {
+        std::vector<unsigned char> pk,superForgerPK;
+        copy(cSuperForgerPK.begin(),cSuperForgerPK.end(),superForgerPK.begin());
+        if(GetBlockForgerPK(pk,block) && pk == superForgerPK) {
             return true;
         } else {
-            LogPrintf("CheckBlock nBlockHeight < nDposStartHeight ForgerAddress error\n");
+            LogPrintf("CheckBlock nBlockHeight < nDposStartHeight ForgerPK error\n");
             return false;
         }
     }
@@ -607,10 +453,10 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
         GetBlockDelegates(cDelegateInfo, pPrevBlockIndex);
     }
 
-    CKeyID delegate;
-    GetBlockForgerKeyID(delegate, block);
+    std::vector<unsigned char> delegate_pk;
+    GetBlockForgerPK(delegate_pk, block);
     if(nCurrentDelegateIndex < cDelegateInfo.delegates.size()
-            && cDelegateInfo.delegates[nCurrentDelegateIndex].keyid == delegate) {
+            && cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == delegate_pk) {
         ret = true;
     } else {
         LogPrintf("CheckBlock GetDelegateID blockhash:%s error\n", block.ToString().c_str());
@@ -802,4 +648,28 @@ void DPoS::AddIrreversibleBlock(int64_t height, uint256 hash)
     cIrreversibleBlockInfo.mapHeightHash.insert(std::make_pair(height, hash));
 
     Selector::GetInstance().DeleteInvalidVote(height);
+}
+
+bool DPoS::VrfVerify(std::vector<unsigned char> output, std::vector<unsigned char> pk, std::vector<unsigned char> proof, std::vector<unsigned char> msg)
+{
+    if (crypto_vrf_verify(&output[0], &pk[0], &proof[0], &msg[0], msg.size()) != 0){
+        return false;
+    }
+    return true;
+}
+
+void DPoS::MakeVrfMessage(const CBlock &block, std::vector<unsigned char> &msg)
+{
+    int64_t time=block.GetBlockTime();
+    msg.push_back(time);
+    DelegateInfo cDelegateInfo;
+    VRFScriptToDelegateInfo(cDelegateInfo, block.vtx[0]->vout[1].scriptPubKey);
+    uint256 hash = block.GetHash();
+    int size=msg.size();
+    msg.resize(size+hash.size()+cDelegateInfo.vrfProof.size());
+    memcpy(&msg[size],hash.begin(),hash.size());
+
+    unsigned char vrfvalue[64];
+    crypto_vrf_proof_to_hash(vrfvalue, &cDelegateInfo.vrfProof[0]);
+    memcpy(&msg[size+hash.size()],vrfvalue,sizeof (vrfvalue));
 }

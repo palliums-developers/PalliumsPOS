@@ -9,10 +9,11 @@ class Delegate;
 class Selector{
 public:
     static Selector& GetInstance();
-    std::vector<Delegate> GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum);
+    std::vector<Delegate> GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum, std::vector<unsigned char> vrfValue);
     void DeleteInvalidVote(uint64_t height);
     CKeyID GetDelegate(const std::string& name);
-    std::string GetDelegate(const CKeyID& keyid);
+    std::string GetDelegate(const std::vector<unsigned char>& vrfpubkey);
+    int GetVrfKeypairFromPrivKey(unsigned char *pk, unsigned char *sk,const unsigned char *privkey);
 private:
     boost::shared_mutex lockMapHashHeightInvalidVote;
 };

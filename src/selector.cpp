@@ -3,6 +3,7 @@
 #include <util.h>
 #include <utilstrencodings.h>
 #include <wallet/wallet.h>
+#include <vrf/crypto_vrf.h>
 
 static Selector selector;
 
@@ -11,22 +12,19 @@ Selector& Selector::GetInstance()
     return selector;
 }
 
-std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum)
+std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum, std::vector<unsigned char> vrfValue)
 {
     std::vector<Delegate> result;
-    std::set<CKeyID> delegates;
-
-    for(auto &publickey:vWitnessPublickeys)
+    std::map<CKeyID,std::vector<unsigned char>> delegates;
+    for(auto &s:vWitnessPublickeys)
     {
-        std::vector<unsigned char> data(ParseHex(publickey));
-        CPubKey pubKey(data.begin(), data.end());
-        if (!pubKey.IsFullyValid())
-            LogPrintf("Pubkey % is not a valid public key",publickey);
-        auto keyid = pubKey.GetID();
+        std::vector<unsigned char> pk(ParseHex(s));
+        std::vector<unsigned char> data(vrfValue.begin(),vrfValue.end());
+        auto keyid = CKeyID(Hash160(data));
         if (keyid.IsNull()) {
             continue;
         }
-        delegates.insert(keyid);
+        delegates.insert(std::make_pair(keyid,pk));
     }
 
     uint64_t vote_num=delegates.size()+nMinHoldBalance;
@@ -36,7 +34,7 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uin
             break;
         }
         //TODO:vote num auto detect
-        result.push_back(Delegate(*it,vote_num--));
+        result.push_back(Delegate(it->second,vote_num--));
     }
     return result;
 }
@@ -47,20 +45,18 @@ void Selector::DeleteInvalidVote(uint64_t height)
     return;
 }
 
-std::string Selector::GetDelegate(const CKeyID &keyid)
+std::string Selector::GetDelegate(const std::vector<unsigned char>& vrfpubkey)
 {
-    for(auto &publickey:vWitnessPublickeys)
+    for(auto &str_vrf_pubkey:vWitnessPublickeys)
     {
-        std::vector<unsigned char> data(ParseHex(publickey));
-        CPubKey pubKey(data.begin(), data.end());
-        if (!pubKey.IsFullyValid())
-            LogPrintf("Pubkey % is not a valid public key",publickey);
-        auto kid = pubKey.GetID();
-        if (kid.IsNull()) {
-            continue;
-        }
-        if(kid==keyid)
-            return publickey;
+        std::vector<unsigned char> data(ParseHex(str_vrf_pubkey));
+        if(data==vrfpubkey)
+            return str_vrf_pubkey;
     }
     return std::string();
+}
+
+int Selector::GetVrfKeypairFromPrivKey(unsigned char *pk, unsigned char *sk, const unsigned char *privkey)
+{
+    return crypto_vrf_ietfdraft03_keypair_from_seed(pk, sk, privkey);
 }
