@@ -195,7 +195,6 @@ void test_standard(){
         printf("Case %d: truncated message test Passed ...\n", cnt);
         printf("Case %d: proof_to_hash consistency ...\n", cnt);
         printf("Case %d: wrong betta test Passed ...\n", cnt);
-
     }
 
 }

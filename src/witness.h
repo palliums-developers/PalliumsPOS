@@ -25,7 +25,6 @@ struct Delegate{
 struct VrfInfo{
     std::vector<unsigned char> pk;
     std::vector<unsigned char> proof;
-    Delegate(std::vector<unsigned char> &pk, std::vector<unsigned char> &proof) {this->pk=pk; this->proof=proof;}
 };
 
 struct DelegateInfo{
@@ -56,10 +55,12 @@ public:
 
     bool IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> vrfpk, time_t t);
 
-    DelegateInfo GetNextDelegates(std::vector<unsigned char> vrfValue);
+    DelegateInfo GetNextDelegates(std::vector<unsigned char> &vrfValue);
     bool GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex);
     bool GetBlockDelegates(DelegateInfo& cDelegateInfo, const CBlock& block);
     bool CheckBlockDelegate(const CBlock& block);
+    std::vector<unsigned char> GetBlockVRF(const CBlock& block);
+    std::vector<unsigned char> GetBlockVRF(CBlockIndex* pBlockIndex);
     bool CheckBlockHeader(const CBlockHeader& block);
     bool CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo);
     bool CheckCoinbase(const CTransaction& tx, const CBlock& block);
@@ -71,7 +72,7 @@ public:
     static std::string DelegateToData(const DelegateInfo& cDelegateInfo);
 
 //    static bool ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
-    static bool VRFScriptToDelegateInfo(DelegateInfo& cDelegateInfo, const CScript& script);
+    static bool VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInfo, const CScript& script);
 //    static CScript DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
     static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& vrf_pk, const std::vector<unsigned char>& vrf_sk);
 
@@ -95,7 +96,7 @@ public:
     void AddIrreversibleBlock(int64_t height, uint256 hash);
 
     static bool VrfVerify(std::vector<unsigned char> output,std::vector<unsigned char> pk,std::vector<unsigned char> proof,std::vector<unsigned char> msg);
-    static void MakeVrfMessage(const CBlock& block,std::vector<unsigned char>& msg);
+    static bool MakeVrfMessage(const CBlock& block,std::vector<unsigned char>& msg);
 
     const int nFirstIrreversibleThreshold = 90;
     const int nSecondIrreversibleThreshold = 67;

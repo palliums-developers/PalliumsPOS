@@ -20,6 +20,7 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uin
     {
         std::vector<unsigned char> pk(ParseHex(s));
         std::vector<unsigned char> data(vrfValue.begin(),vrfValue.end());
+        data.insert(data.end(),pk.begin(),pk.end());
         auto keyid = CKeyID(Hash160(data));
         if (keyid.IsNull()) {
             continue;
