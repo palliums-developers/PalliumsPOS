@@ -53,7 +53,7 @@ public:
     static DPoS& GetInstance();
     void Init();
 
-    bool IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> vrfpk, time_t t);
+    bool IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> &vpk, const std::vector<unsigned char> &vsk, time_t t);
 
     DelegateInfo GetNextDelegates(std::vector<unsigned char> &vrfValue);
     bool GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex);
@@ -95,8 +95,10 @@ public:
     bool IsValidBlockCheckIrreversibleBlock(int64_t height, uint256 hash);
     void AddIrreversibleBlock(int64_t height, uint256 hash);
 
-    static bool VrfVerify(std::vector<unsigned char> output,std::vector<unsigned char> pk,std::vector<unsigned char> proof,std::vector<unsigned char> msg);
-    static bool MakeVrfMessage(const CBlock& block,std::vector<unsigned char>& msg);
+    static bool VerifyVrfProof(CBlockIndex* pBlockIndex, std::vector<unsigned char> &output, const std::vector<unsigned char> &pk, std::vector<unsigned char> &proof);
+    static bool CreateVrfProof(const CBlock& block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
+    static bool CreateVrfProof(CBlockIndex* pBlockIndex, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
+    static bool CreateVrfData(const CBlock& block, std::vector<unsigned char>& msg);
 
     const int nFirstIrreversibleThreshold = 90;
     const int nSecondIrreversibleThreshold = 67;

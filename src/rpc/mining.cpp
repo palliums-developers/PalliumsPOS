@@ -960,7 +960,7 @@ void* ThreadDelegating(void *arg)
             time_t t = time(nullptr);
             DelegateInfo cDelegateInfo;
 
-            if(!dPos.IsMining(cDelegateInfo, vecVrfPK, t)){
+            if(!dPos.IsMining(cDelegateInfo, vecVrfPK, vecVrfSK, t)){
                 break;
             }
             std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, vecVrfPK, vecVrfSK), t);
