@@ -182,10 +182,21 @@ std::vector<std::string> CNodeToken::GetNodeTokenerPubkey(uint32_t propertyId, C
 
         std::string sPubkey = pubkey.get_str();
 
+        CPubKey pubkeyHex(ParseHex(sPubkey));
+
+        vecPubkeyIDs.push_back(pubkeyHex);
+
         vecPubkeys.emplace_back(std::move(sPubkey));
 
     }
 
     return  vecPubkeys;
+
+}
+
+uint32_t CNodeToken::GetPropertyIdByNodeTokenType(TokenType type)
+{
+
+    return  propertyId;
 
 }
