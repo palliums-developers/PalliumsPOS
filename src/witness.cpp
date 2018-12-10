@@ -422,9 +422,9 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
         return false;
     }
 
-//    if(block.hashPrevBlock.IsNull()) {
-//        return true;
-//    }
+    if(block.hashPrevBlock.IsNull()) {
+        return true;
+    }
 
     BlockMap::iterator miSelf = mapBlockIndex.find(block.hashPrevBlock);
     if(miSelf == mapBlockIndex.end()) {
