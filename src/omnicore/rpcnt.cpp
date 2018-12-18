@@ -11,6 +11,7 @@
 #include "omnicore/sp.h"
 #include "omnicore/tx.h"
 #include "omnicore/wallettxbuilder.h"
+#include "omnicore/createpayload.h"
 
 #include "policy/fees.h"
 #include "init.h"
@@ -25,6 +26,8 @@
 #include <stdint.h>
 #include <stdexcept>
 #include <string>
+#include <iostream>
+#include <sstream>
 
 #include "rpcnt.h"
 #include "nodetoken.h"
@@ -60,6 +63,7 @@
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
+#include <keystore.h>
 
 #include <stdint.h>
 
@@ -67,7 +71,6 @@
 
 #include <functional>
 //
-
 
 
 
@@ -79,6 +82,8 @@ extern CCriticalSection cs_main;
 extern UniValue omni_sendissuancefixed(const JSONRPCRequest& request);
 
 extern std::shared_ptr<CWallet> GetWalletForJSONRPCRequest(const JSONRPCRequest& request);
+
+extern void omni_GetWalletForJSONRPCRequest(const JSONRPCRequest& request);
 
 UniValue sinnga_sendissuancefixed(const JSONRPCRequest &request)
 {
@@ -92,6 +97,7 @@ UniValue sinnga_sendissuancefixed(const JSONRPCRequest &request)
 
     nodeToken.GetNodeTokenerPubkey(nId, pwallet);
 
+    nodeToken.GetRegisterNodeTokenerVrfPubkey(nId);
     //test
     std::string sOP = "Hello,OPReturn!";
 
@@ -279,12 +285,374 @@ UniValue sinnga_sendtoaddress(const JSONRPCRequest &request)
     return tx->GetHash().GetHex();
 }
 
+UniValue omni_registernodetoken(const JSONRPCRequest &request)
+{
+    omni_GetWalletForJSONRPCRequest(request);
+    const UniValue &params = request.params;
+    const bool& fHelp = request.fHelp;
+    if (fHelp || params.size() < 4 || params.size() > 5)
+        throw runtime_error(
+            "omni_registernodetokent \"fromaddress\" \"toaddress\" propertyid \"amount\" ( \"memo\" )\n"
+
+            "\nIssue or grant new units of managed tokens.\n"
+
+            "\1:\n"
+            "1. fromaddress          (string, required) the address to send from\n"
+            "2. toaddress            (string, required) the receiver of the tokens (sender by default, can be \"\")\n"
+            "3. propertyid           (number, required) the identifier of the tokens to grant\n"
+            "4. amount               (string, required) the amount of tokens to create\n"
+            "5. memo                 (string, optional) a text note attached to this transaction (none by default)\n"
+
+            "\nResult:\n"
+            "\"hash\"                  (string) the hex-encoded transaction hash\n"
+
+            "\nExamples:\n"
+            + HelpExampleCli("omni_registernodetoken", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" \"\" 51 \"7000\"")
+            + HelpExampleRpc("omni_registernodetoken", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", \"\", 51, \"7000\"")
+        );
+
+    // obtain parameters & info
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string toAddress = !ParseText(params[1]).empty() ? ParseAddress(params[1]): "";
+    uint32_t propertyId = ParsePropertyId(params[2]);
+    int64_t amount = ParseAmount(params[3], isPropertyDivisible(propertyId));
+    std::string memo = (params.size() > 4) ? ParseText(params[4]): "";
+
+    // input vrfpubkey
+    if(toAddress.empty())
+    {
+       memo = fromAddress;
+    }
+    else
+    {
+       memo = toAddress;
+    }
+
+    // perform checks
+    RequireExistingProperty(propertyId);
+    RequireManagedProperty(propertyId);
+    RequireTokenIssuer(fromAddress, propertyId);
+
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_Grant(propertyId, amount, memo);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = WalletTxBuilder(fromAddress, toAddress, "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            return txid.GetHex();
+        }
+    }
+}
+
+UniValue omni_getregisterpubkeys(const JSONRPCRequest &request)
+{
+    CNodeToken nodeToken;
+
+    uint32_t nId = 2147483653;
+
+   std::vector<std::string> vecVrfPubKeys = nodeToken.GetRegisterNodeTokenerVrfPubkey(nId);
+
+   UniValue responseVrfPubkeys(UniValue::VOBJ);
+   uint32_t nOrder = 1;
+   for(std::vector<std::string>::iterator itr = vecVrfPubKeys.begin();
+       itr != vecVrfPubKeys.end(); itr++)
+   {
+       std::string sVrfPubkey = *itr;
+       std::string skey("vrfpubkey");
+       char chOrder[4];
+       memset(chOrder, 0, 4);
+       memcpy(chOrder, &nOrder, 4);
+       skey += chOrder;
+       responseVrfPubkeys.push_back(Pair(skey, sVrfPubkey));
+       nOrder++;
+   }
+
+   return  responseVrfPubkeys;
+}
+
+UniValue omni_registernodebytx(const JSONRPCRequest &request)
+{
+    omni_GetWalletForJSONRPCRequest(request);
+    const UniValue &params = request.params;
+    const bool& fHelp = request.fHelp;
+    if (fHelp || params.size() < 4 || params.size() > 6)
+        throw runtime_error(
+            "omni_registernodebytx \"fromaddress\" \"toaddress\" propertyid \"amount\" ( \"redeemaddress\" \"referenceamount\" )\n"
+
+            "\nCreate and broadcast a simple send transaction.\n"
+
+            "\nArguments:\n"
+            "1. fromaddress          (string, required) the address to send from\n"
+            "2. toaddress            (string, required) the address of the receiver\n"
+            "3. propertyid           (number, required) the identifier of the tokens to send\n"
+            "4. amount               (string, required) the amount to send\n"
+            "5. redeemaddress        (string, optional) an address that can spend the transaction dust (sender by default)\n"
+            "6. referenceamount      (string, optional) a bitcoin amount that is sent to the receiver (minimal by default)\n"
+
+            "\nResult:\n"
+            "\"hash\"                  (string) the hex-encoded transaction hash\n"
+
+            "\nExamples:\n"
+            + HelpExampleCli("omni_registernodebytx", "\"3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY\" \"37FaKponF7zqoMLUjEiko25pDiuVH5YLEa\" 1 \"100.0\"")
+            + HelpExampleRpc("omni_registernodebytx", "\"3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY\", \"37FaKponF7zqoMLUjEiko25pDiuVH5YLEa\", 1, \"100.0\"")
+        );
+
+    // obtain parameters & info
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string toAddress = ParseAddress(params[1]);
+    uint32_t propertyId = ParsePropertyId(params[2]);
+    uint64_t amount = 0; //ParseAmount(params[3], isPropertyDivisible(propertyId))
+    std::string redeemAddress = (params.size() > 4 && !ParseText(params[4]).empty()) ? ParseAddress(params[4]): "";
+    int64_t referenceAmount = (params.size() > 5) ? ParseAmount(params[5], true): 0;
+
+    // perform checks
+    RequireExistingProperty(propertyId);
+    //RequireBalance(fromAddress, propertyId, amount);
+    RequireSaneReferenceAmount(referenceAmount);
+
+    // create a payload for the transaction
+
+    amount = 0; // token amount can be 0
+
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    CWallet* const pwallet = wallet.get();
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    EnsureWalletIsUnlocked(pwallet);
+
+    std::string strAddress = request.params[0].get_str();
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    }
+    auto keyid = GetKeyForDestination(*pwallet, dest);
+    if (keyid.IsNull()) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
+    }
+    CPubKey vchPubkey;
+    if (!pwallet->GetPubKey(keyid, vchPubkey)) {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + strAddress + " is not known");
+    }
+
+    std::string vrfPubkey =std::string((const char*)vchPubkey.data());//"123456789012345678999"
+    std::string vrfPubkeyH = HexStr(vchPubkey);
+    std::string vrfPubkeyNew = vrfPubkeyH.substr(0,31);
+    std::string did = vrfPubkeyH.substr(31,10);
+    std::vector<unsigned char> payload = CreatePayload_RegisaterNodeByTx(propertyId, amount, vrfPubkeyNew, did);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = WalletTxBuilder(fromAddress, toAddress, redeemAddress, referenceAmount, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, (int64_t)amount);
+            return txid.GetHex();
+        }
+    }
+}
+
+UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
+{
+     UniValue value;
+     return  value;
+}
+
+UniValue omni_getregisterInfo(const JSONRPCRequest &request)
+{
+    omni_GetWalletForJSONRPCRequest(request);
+    const UniValue &params = request.params;
+    const bool& fHelp = request.fHelp;
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "omni_getregisterInfo \n"
+            "\nGet registed node info include VrfPubkey and Did\n"
+            "\nWithout Arguments\n"
+            "\nResult:\n"
+            "[                                 (array of JSON objects)\n"
+            " \"vrfpubkey\" : \"did\",                  (string) the hex-encoded hash of the transaction\n"
+            "  ...\n"
+            "]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("omni_getregisterInfo","")
+        );
+
+
+   CNodeToken nodeToken;
+   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+   UniValue responseVrfPubkeys(UniValue::VOBJ);
+   for(std::map<std::string, std::string>::iterator itr = mapVrfDid.begin();
+       itr != mapVrfDid.end(); itr++)
+   {
+       std::string sVrfPubkey = itr->first;
+       std::string sDid = itr->second;
+       responseVrfPubkeys.push_back(Pair(sVrfPubkey, sDid));
+   }
+   return  responseVrfPubkeys;
+}
+
+UniValue omni_registernodebytxtest(const JSONRPCRequest &request)
+{
+
+    omni_GetWalletForJSONRPCRequest(request);
+    const UniValue &params = request.params;
+    const bool& fHelp = request.fHelp;
+    if (fHelp || params.size() < 4 || params.size() > 6)
+        throw runtime_error(
+            "omni_registernodebytx \"fromaddress\" \"toaddress\" propertyid \"amount\" ( \"redeemaddress\" \"referenceamount\" )\n"
+
+            "\nCreate and broadcast a simple send transaction.\n"
+
+            "\nArguments:\n"
+            "1. fromaddress          (string, required) the address to send from\n"
+            "2. toaddress            (string, required) the address of the receiver\n"
+            "3. propertyid           (number, required) the identifier of the tokens to send\n"
+            "4. amount               (string, required) the amount to send\n"
+            "5. redeemaddress        (string, optional) an address that can spend the transaction dust (sender by default)\n"
+            "6. referenceamount      (string, optional) a bitcoin amount that is sent to the receiver (minimal by default)\n"
+
+            "\nResult:\n"
+            "\"hash\"                  (string) the hex-encoded transaction hash\n"
+
+            "\nExamples:\n"
+            + HelpExampleCli("omni_registernodebytx", "\"3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY\" \"37FaKponF7zqoMLUjEiko25pDiuVH5YLEa\" 1 \"100.0\"")
+            + HelpExampleRpc("omni_registernodebytx", "\"3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY\", \"37FaKponF7zqoMLUjEiko25pDiuVH5YLEa\", 1, \"100.0\"")
+        );
+
+    // obtain parameters & info
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string toAddress = ParseAddress(params[1]);
+    uint32_t propertyId = ParsePropertyId(params[2]);
+    uint64_t amount = ParseAmount(params[3], isPropertyDivisible(propertyId));
+    std::string redeemAddress = (params.size() > 4 && !ParseText(params[4]).empty()) ? ParseAddress(params[4]): "";
+    int64_t referenceAmount = (params.size() > 5) ? ParseAmount(params[5], true): 0;
+
+    // perform checks
+    RequireExistingProperty(propertyId);
+    RequireBalance(fromAddress, propertyId, amount);
+    RequireSaneReferenceAmount(referenceAmount);
+
+    // create a payload for the transaction
+
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    CWallet* const pwallet = wallet.get();
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    EnsureWalletIsUnlocked(pwallet);
+
+    std::string strAddress = request.params[0].get_str();
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    }
+    auto keyid = GetKeyForDestination(*pwallet, dest);
+    if (keyid.IsNull()) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
+    }
+    CPubKey vchPubkey;
+    if (!pwallet->GetPubKey(keyid, vchPubkey)) {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + strAddress + " is not known");
+    }
+
+    std::string vrfPubkey ="123456789012345678999"; //std::string((const char*)vchPubkey.data())
+    std::string vrfPubkeyH = HexStr(vchPubkey);
+    std::string vrfPubkeyNew = vrfPubkeyH.substr(0,31);
+    std::string did = "1230";
+    std::vector<unsigned char> payload = CreatePayload_RegisaterNodeByTxTest(vrfPubkeyNew, did);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = WalletTxBuilder(fromAddress, toAddress, redeemAddress, referenceAmount, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, (int64_t)amount);
+            return txid.GetHex();
+        }
+    }
+
+}
+
+UniValue omni_getregisterInfotest(const JSONRPCRequest &request)
+{
+    omni_GetWalletForJSONRPCRequest(request);
+    const UniValue &params = request.params;
+    const bool& fHelp = request.fHelp;
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "omni_getregisterInfo \n"
+            "\nGet registed node info include VrfPubkey and Did\n"
+            "\nWithout Arguments\n"
+            "\nResult:\n"
+            "[                                 (array of JSON objects)\n"
+            " \"vrfpubkey\" : \"did\",                  (string) the hex-encoded hash of the transaction\n"
+            "  ...\n"
+            "]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("omni_getregisterInfo","")
+        );
+
+   CNodeToken nodeToken;
+   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyTest();
+   UniValue responseVrfPubkeys(UniValue::VOBJ);
+   for(std::map<std::string, std::string>::iterator itr = mapVrfDid.begin();
+       itr != mapVrfDid.end(); itr++)
+   {
+       std::string sVrfPubkey = itr->first;
+       std::string sDid = itr->second;
+       responseVrfPubkeys.push_back(Pair(sVrfPubkey, sDid));
+   }
+   return  responseVrfPubkeys;
+}
+
+
+
 static const CRPCCommand commands[] =
 { //  category                             name                            actor (function)               okSafeMode
   //  ------------------------------------ ------------------------------- ------------------------------ ----------
 
-  { "omni layer (transaction creation)", "sinnga_sendissuancefixed",       &sinnga_sendissuancefixed,       {"fromaddress","ecosystem","type","previousid","category","subcategory","name","url","data","amount"} },
-  { "wallet",                                "sinnga_sendtoaddress",           &sinnga_sendtoaddress,       {"address","amount","comment","comment_to","subtractfeefromamount","replaceable","conf_target","estimate_mode"} },
+  { "omni layer (transaction creation)", "sinnga_sendissuancefixed",       &sinnga_sendissuancefixed,   {"fromaddress","ecosystem","type","previousid","category","subcategory","name","url","data","amount"} },
+  { "wallet",                            "sinnga_sendtoaddress",           &sinnga_sendtoaddress,       {"address","amount","comment","comment_to","subtractfeefromamount","replaceable","conf_target","estimate_mode"} },
+  { "omni layer (transaction creation)", "omni_registernodetoken",         &omni_registernodetoken,     {"fromaddress","toaddress","propertyid","amount","memo"} },
+  { "omni layer (transaction creation)", "omni_getregisterpubkeys",        &omni_getregisterpubkeys,     {} },
+  { "omni layer (transaction creation)", "omni_registernodebytx",          &omni_registernodebytx,                    {"fromaddress","toaddress","propertyid","amount","redeemaddress","referenceamount"} },
+  { "omni layer (transaction creation)", "omni_unregisternodebytx",        &omni_unregisternodebytx,                  {"address"} },
+  { "omni layer (transaction creation)", "omni_getregisterInfo",           &omni_getregisterInfo,        {} },
+
+  { "omni layer (transaction creation)", "omni_registernodebytxtest",          &omni_registernodebytxtest,                    {"fromaddress","toaddress","propertyid","amount","redeemaddress","referenceamount"} },
+  { "omni layer (transaction creation)", "omni_getregisterInfotest",           &omni_getregisterInfotest,        {} },
+
 
 };
 

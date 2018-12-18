@@ -6,8 +6,17 @@
 #include <script/standard.h>
 #include <rpc/server.h>
 
+
+#include "validation.h"
+#include "chainparams.h"
+
 #include "omnicore/omnicore.h"
 #include "omnicore/tally.h"
+#include "omnicore/walletfetchtxs.h"
+#include "omnicore/rpc.h"
+#include "omnicore/errors.h"
+#include "omnicore/utilsbitcoin.h"
+#include "omnicore/tx.h"
 
 #include "nodetoken.h"
 
@@ -194,9 +203,329 @@ std::vector<std::string> CNodeToken::GetNodeTokenerPubkey(uint32_t propertyId, C
 
 }
 
+std::vector<std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkey(uint32_t propertyId)
+{
+
+    std::vector<std::string> veVrfPubkey;
+
+    propertyId++;
+
+    //1, get omni transaction list
+
+    int64_t nCount = 10;
+    int64_t nFrom = 0;
+    int64_t nStartBlock = 0;
+    int64_t nEndBlock = 999999999;
+
+    //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
+    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
+
+    //2, get payload by transaction
+    for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++)
+    {
+        if (nFrom <= 0 && nCount > 0)
+        {
+
+
+            uint256 txHash = it->second;
+
+            CTransactionRef tx;
+            uint256 blockHash;
+            if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+                PopulateFailure(MP_TX_NOT_FOUND);
+            }
+
+            int blockTime = 0;
+            int blockHeight = GetHeight();
+            if (!blockHash.IsNull()) {
+                CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+                if (NULL != pBlockIndex) {
+                    blockTime = pBlockIndex->nTime;
+                    blockHeight = pBlockIndex->nHeight;
+                }
+            }
+
+            CMPTransaction mp_obj;
+            int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+            if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+
+             std::string payload = mp_obj.getPayload();
+             DecodePayload(payload, veVrfPubkey);
+
+             nCount--;
+
+        }
+        nFrom--;
+    }
+
+
+    //3, decode payload and get vrfPubkey
+
+    return  veVrfPubkey;
+
+}
+
+std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkey()
+{
+    std::map<std::string, std::string> veVrfPubkeyDid;
+
+    //1, get omni transaction list
+    int64_t nCount = 50;
+    int64_t nFrom = 0;
+    int64_t nStartBlock = 0;
+    int64_t nEndBlock = 999999999;
+
+    //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
+    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
+
+    //2, get payload by transaction
+    for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++)
+    {
+        if (nFrom <= 0 && nCount > 0)
+        {
+            uint256 txHash = it->second;
+            CTransactionRef tx;
+            uint256 blockHash;
+            if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+                PopulateFailure(MP_TX_NOT_FOUND);
+            }
+
+            int blockTime = 0;
+            int blockHeight = GetHeight();
+            if (!blockHash.IsNull()) {
+                CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+                if (NULL != pBlockIndex) {
+                    blockTime = pBlockIndex->nTime;
+                    blockHeight = pBlockIndex->nHeight;
+                }
+            }
+
+            //3, decode payload and get vrfPubkey
+            CMPTransaction mp_obj;
+            int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+            if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+
+             std::string payload = mp_obj.getPayload();
+             GetVrfPubkeyDidbyDecodePayload(payload, veVrfPubkeyDid);
+
+             nCount--;
+        }
+        nFrom--;
+    }
+
+    return  veVrfPubkeyDid;
+}
+
+std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkeyTest()
+{
+    std::map<std::string, std::string> veVrfPubkeyDid;
+
+    //1, get omni transaction list
+    int64_t nCount = 100;
+    int64_t nFrom = 0;
+    int64_t nStartBlock = 0;
+    int64_t nEndBlock = 999999999;
+
+    //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
+    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
+
+    //2, get payload by transaction
+    for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++)
+    {
+        if (nFrom <= 0 && nCount > 0)
+        {
+            uint256 txHash = it->second;
+            CTransactionRef tx;
+            uint256 blockHash;
+            if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+                PopulateFailure(MP_TX_NOT_FOUND);
+            }
+
+            int blockTime = 0;
+            int blockHeight = GetHeight();
+            if (!blockHash.IsNull()) {
+                CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+                if (NULL != pBlockIndex) {
+                    blockTime = pBlockIndex->nTime;
+                    blockHeight = pBlockIndex->nHeight;
+                }
+            }
+
+            //3, decode payload and get vrfPubkey
+            CMPTransaction mp_obj;
+            int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+            if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+
+             std::string payload = mp_obj.getPayload();
+             auto propertyType =  mp_obj.getPropertyType();
+             auto ss = mp_obj.getProperty();
+             GetVrfPubkeyDidbyDecodePayloadTest(payload, veVrfPubkeyDid);
+
+             nCount--;
+        }
+        nFrom--;
+    }
+
+    return  veVrfPubkeyDid;
+}
+
 uint32_t CNodeToken::GetPropertyIdByNodeTokenType(TokenType type)
 {
 
     return  propertyId;
 
 }
+
+void CNodeToken::DecodePayload(std::string payload, std::vector<std::string>& veVrfPubkey)
+{
+
+    unsigned char vchPayload[255];
+    memset(vchPayload,0,255);
+
+    std::vector<unsigned char> vcPayloadTemp;
+    if(IsHex(payload))
+    {
+        vcPayloadTemp = ParseHex(payload);
+        int nsize = 0;
+        for(std::vector<unsigned char>::iterator itr = vcPayloadTemp.begin();
+            itr != vcPayloadTemp.end(); itr++)
+        {
+            vchPayload[nsize] = *itr;
+            nsize++;
+        }
+    }
+    else
+    {
+        memcpy(vchPayload, &payload, payload.length());
+    }
+
+    uint16_t messageType;
+    memcpy(&messageType, &vchPayload[0], 2);
+    SwapByteOrder16(messageType);
+
+    uint16_t messageVer;
+    memcpy(&messageVer, &vchPayload[2], 2);
+    SwapByteOrder16(messageVer);
+
+    uint32_t propertyId;
+    memcpy(&propertyId, &vchPayload[4], 4);
+    SwapByteOrder32(propertyId);
+
+    uint64_t amount;
+    memcpy(&amount, &vchPayload[8], 8);
+    SwapByteOrder64(amount);
+
+    unsigned char chmemo[255];
+    memset(chmemo, 0, 255);
+    memcpy(&chmemo, &vchPayload[16], 255 - 16);
+
+
+    std::string memostr;
+    memostr = std::string((char*)chmemo);
+
+    veVrfPubkey.push_back(memostr);
+}
+
+void CNodeToken::GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<std::string,std::string>& mapVrfPubkeyDid)
+{
+    unsigned char vchPayload[255];
+    memset(vchPayload,0,255);
+
+    std::vector<unsigned char> vcPayloadTemp;
+    if(IsHex(payload))
+    {
+        vcPayloadTemp = ParseHex(payload);
+        int nsize = 0;
+        for(std::vector<unsigned char>::iterator itr = vcPayloadTemp.begin();
+            itr != vcPayloadTemp.end(); itr++)
+        {
+            vchPayload[nsize] = *itr;
+            nsize++;
+        }
+    }
+    else
+    {
+        memcpy(vchPayload, &payload, payload.length());
+    }
+
+    uint16_t messageVer;
+    memcpy(&messageVer, &vchPayload[0], 2);
+    SwapByteOrder16(messageVer);
+
+    uint16_t messageType;
+    memcpy(&messageType, &vchPayload[2], 2);
+    SwapByteOrder16(messageType);
+    if(messageType != 0 )
+    {
+        return;
+    }
+
+    uint32_t propertyId;
+    memcpy(&propertyId, &vchPayload[4], 4);
+    SwapByteOrder32(propertyId);
+
+    uint64_t amount;
+    memcpy(&amount, &vchPayload[8], 8);
+    SwapByteOrder64(amount);
+
+    std::string sVrfPubkey;
+    int nIndex = 16;
+    while(vchPayload[nIndex] != '\0')
+    {
+        sVrfPubkey.push_back((char)vchPayload[nIndex]);
+        nIndex++;
+    }
+    if(sVrfPubkey.length() <= 0)
+    {
+        return;
+    }
+
+    const char* pDid = ++nIndex + (char*)&vchPayload[0];
+    std::string sDid(pDid);
+    mapVrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sDid));
+}
+
+void CNodeToken::GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::map<std::string, std::string> &VrfPubkeyDid)
+{
+    unsigned char vchPayload[255];
+    memset(vchPayload,0,255);
+
+    std::vector<unsigned char> vcPayloadTemp;
+    if(IsHex(payload))
+    {
+        vcPayloadTemp = ParseHex(payload);
+        int nsize = 0;
+        for(std::vector<unsigned char>::iterator itr = vcPayloadTemp.begin();
+            itr != vcPayloadTemp.end(); itr++)
+        {
+            vchPayload[nsize] = *itr;
+            nsize++;
+        }
+    }
+    else
+    {
+        memcpy(vchPayload, &payload, payload.length());
+    }
+
+
+    uint16_t messageType;
+    memcpy(&messageType, &vchPayload[0], 2);
+    SwapByteOrder16(messageType);
+    if(messageType != 34)
+    {
+        return;
+    }
+
+    std::string sVrfPubkey;
+    int nIndex = 2;
+    while(vchPayload[nIndex] != '\0')
+    {
+        sVrfPubkey.push_back((char)vchPayload[nIndex]);
+        nIndex++;
+    }
+    const char* pDid = ++nIndex + (char*)&vchPayload[0];
+    std::string sDid(pDid);
+
+    VrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sDid));
+}
+

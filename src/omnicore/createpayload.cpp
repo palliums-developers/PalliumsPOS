@@ -553,5 +553,49 @@ std::vector<unsigned char> CreatePayload_OmniCoreAlert(uint16_t alertType, uint3
     return payload;
 }
 
+
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string did)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageVer = 0;
+    uint16_t messageType = 0;   // depend simple send
+    SwapByteOrder16(messageVer);
+    SwapByteOrder16(messageType);
+    SwapByteOrder32(propertyId);
+    SwapByteOrder64(amount);
+    if (vrfpubkey.size() > 255) vrfpubkey = vrfpubkey.substr(0,255);
+    if (did.size() > 255) did = did.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    PUSH_BACK_BYTES(payload, amount);
+    payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), did.begin(), did.end());
+    payload.push_back('\0');
+
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTxTest(std::string vrfpubkey, std::string did)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 34;
+    SwapByteOrder16(messageType);
+
+
+    if (vrfpubkey.size() > 255) vrfpubkey = vrfpubkey.substr(0,255);
+    if (did.size() > 255) did = did.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), did.begin(), did.end());
+    payload.push_back('\0');
+
+    return payload;
+}
+
 #undef PUSH_BACK_BYTES
 #undef PUSH_BACK_BYTES_PTR

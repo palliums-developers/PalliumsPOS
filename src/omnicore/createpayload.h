@@ -33,4 +33,8 @@ std::vector<unsigned char> CreatePayload_OmniCoreAlert(uint16_t alertType, uint3
 std::vector<unsigned char> CreatePayload_DeactivateFeature(uint16_t featureId);
 std::vector<unsigned char> CreatePayload_ActivateFeature(uint16_t featureId, uint32_t activationBlock, uint32_t minClientVersion);
 
+// add by zzl
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string did);
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTxTest(std::string vrfpubkey, std::string did);
+
 #endif // OMNICORE_CREATEPAYLOAD_H
