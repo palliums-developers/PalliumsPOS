@@ -28,6 +28,8 @@ public:
 
     std::map<std::string,std::string> GetRegisterNodeTokenerVrfPubkeyTest();
 
+    static bool IsKeyidRegister(const std::string& keyid); // keyid is Hex string
+
 private:
     uint32_t GetPropertyIdByNodeTokenType(TokenType type);
     void DecodePayload(std::string payload, std::vector<std::string>& veVrfPubkey); // Parase omni paylaod
@@ -35,6 +37,7 @@ private:
 
     void GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::map<std::string,std::string>& VrfPubkeyDid); // Parase omni paylaod
 
+    static bool IsHasKeyRegisterKeyId(const std::string& payload, const std::string& keyid); //acquire registerd count of keyid
 private:
     uint32_t propertyId;
 

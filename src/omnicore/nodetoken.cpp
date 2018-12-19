@@ -279,7 +279,7 @@ std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkey()
     std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
 
     //2, get payload by transaction
-    for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++)
+    for (std::map<std::string,uint256>::iterator it = walletTransactions.begin(); it != walletTransactions.end(); it++)
     {
         if (nFrom <= 0 && nCount > 0)
         {
@@ -367,6 +367,60 @@ std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkeyTe
     }
 
     return  veVrfPubkeyDid;
+}
+
+bool CNodeToken::IsKeyidRegister(const std::string& keyid)
+{
+    bool IsRegister = false;
+
+    //1, get omni transaction list
+    int64_t nCount = 50;
+    int64_t nFrom = 0;
+    int64_t nStartBlock = 0;
+    int64_t nEndBlock = 999999999;
+
+    //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
+    std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
+
+    //2, get payload by transaction
+    int64_t nRegisterCount = 0;
+    for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++)
+    {
+        uint256 txHash = it->second;
+        CTransactionRef tx;
+        uint256 blockHash;
+        if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+            PopulateFailure(MP_TX_NOT_FOUND);
+        }
+
+        int blockTime = 0;
+        int blockHeight = GetHeight();
+        if (!blockHash.IsNull()) {
+            CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+            if (NULL != pBlockIndex) {
+                blockTime = pBlockIndex->nTime;
+                blockHeight = pBlockIndex->nHeight;
+            }
+        }
+
+        //3, decode payload and get vrfPubkey
+        CMPTransaction mp_obj;
+        int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+        if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+        std::string sPayload = mp_obj.getPayload();
+        if(IsHasKeyRegisterKeyId(sPayload,keyid)) {
+            nRegisterCount++;
+        }
+     }
+
+    if (nRegisterCount&0x1) {
+        IsRegister = true;  // ji shu shi, symbol register
+    }
+    else {
+        IsRegister = false; //o shu shi, symbol unregiser
+    }
+    return IsRegister;
+
 }
 
 uint32_t CNodeToken::GetPropertyIdByNodeTokenType(TokenType type)
@@ -468,8 +522,12 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<st
     memcpy(&amount, &vchPayload[8], 8);
     SwapByteOrder64(amount);
 
+    uint16_t registerflag;
+    memcpy(&registerflag, &vchPayload[16], 2);
+    SwapByteOrder16(registerflag);
+
     std::string sVrfPubkey;
-    int nIndex = 16;
+    int nIndex = 18;
     while(vchPayload[nIndex] != '\0')
     {
         sVrfPubkey.push_back((char)vchPayload[nIndex]);
@@ -480,9 +538,17 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<st
         return;
     }
 
-    const char* pDid = ++nIndex + (char*)&vchPayload[0];
-    std::string sDid(pDid);
-    mapVrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sDid));
+    const char* pkeyid = ++nIndex + (char*)&vchPayload[0];
+    std::string sKeyid(pkeyid);
+    if(registerflag == 1) {
+        mapVrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sKeyid));
+    } else if(registerflag == 0) {
+       std::map<std::string,std::string>::iterator itr = mapVrfPubkeyDid.find(sVrfPubkey);
+       if(itr != mapVrfPubkeyDid.end()) {
+           mapVrfPubkeyDid.erase(itr);
+       }
+    }
+
 }
 
 void CNodeToken::GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::map<std::string, std::string> &VrfPubkeyDid)
@@ -528,4 +594,71 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::ma
 
     VrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sDid));
 }
+
+bool CNodeToken::IsHasKeyRegisterKeyId(const std::string& payload, const std::string& keyid)
+{
+    bool bRegistetKeyId = false;
+
+    unsigned char vchPayload[255];
+    memset(vchPayload,0,255);
+
+    std::vector<unsigned char> vcPayloadTemp;
+    if(IsHex(payload)) {
+        vcPayloadTemp = ParseHex(payload);
+        int nsize = 0;
+        for(std::vector<unsigned char>::iterator itr = vcPayloadTemp.begin();
+            itr != vcPayloadTemp.end(); itr++)
+        {
+            vchPayload[nsize] = *itr;
+            nsize++;
+        }
+    }
+    else {
+        memcpy(vchPayload, &payload, payload.length());
+    }
+
+    uint16_t messageVer;
+    memcpy(&messageVer, &vchPayload[0], 2);
+    SwapByteOrder16(messageVer);
+
+    uint16_t messageType;
+    memcpy(&messageType, &vchPayload[2], 2);
+    SwapByteOrder16(messageType);
+    if(messageType != 0 ) {
+        return bRegistetKeyId;
+    }
+
+    uint32_t propertyId;
+    memcpy(&propertyId, &vchPayload[4], 4);
+    SwapByteOrder32(propertyId);
+
+    uint64_t amount;
+    memcpy(&amount, &vchPayload[8], 8);
+    SwapByteOrder64(amount);
+
+    uint16_t registerflag;
+    memcpy(&registerflag, &vchPayload[16], 2);
+    SwapByteOrder16(registerflag);
+
+    std::string sVrfPubkey;
+    int nIndex = 18;
+    while(vchPayload[nIndex] != '\0') {
+        sVrfPubkey.push_back((char)vchPayload[nIndex]);
+        nIndex++;
+    }
+    if(sVrfPubkey.length() <= 0) {
+        return bRegistetKeyId;
+    }
+
+    const char* pkeyid = ++nIndex + (char*)&vchPayload[0];
+    std::string sKeyid(pkeyid);
+
+    if(sKeyid == keyid) {
+       bRegistetKeyId = true;
+    }
+
+    return bRegistetKeyId;
+
+}
+
 

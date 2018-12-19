@@ -34,7 +34,11 @@ std::vector<unsigned char> CreatePayload_DeactivateFeature(uint16_t featureId);
 std::vector<unsigned char> CreatePayload_ActivateFeature(uint16_t featureId, uint32_t activationBlock, uint32_t minClientVersion);
 
 // add by zzl
-std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string did);
+std::vector<unsigned char> CreatePayload_RegisterNodeToken(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
+                                                       std::string subcategory, std::string name, std::string url, std::string data, uint64_t amount);
+std::vector<unsigned char> CreatePayload_SendNodeToken(uint32_t propertyId, uint64_t amount);
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string keyid);
+std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string keyid);
 std::vector<unsigned char> CreatePayload_RegisaterNodeByTxTest(std::string vrfpubkey, std::string did);
 
 #endif // OMNICORE_CREATEPAYLOAD_H

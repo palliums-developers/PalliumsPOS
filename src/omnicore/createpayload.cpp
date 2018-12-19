@@ -552,15 +552,69 @@ std::vector<unsigned char> CreatePayload_OmniCoreAlert(uint16_t alertType, uint3
 
     return payload;
 }
+std::vector<unsigned char> CreatePayload_RegisterNodeToken(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category, std::string subcategory, std::string name, std::string url, std::string data, uint64_t amount)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 50;
+    uint16_t messageVer = 0;
+    SwapByteOrder16(messageVer);
+    SwapByteOrder16(messageType);
+    SwapByteOrder16(propertyType);
+    SwapByteOrder32(previousPropertyId);
+    SwapByteOrder64(amount);
+    if (category.size() > 255) category = category.substr(0,255);
+    if (subcategory.size() > 255) subcategory = subcategory.substr(0,255);
+    if (name.size() > 255) name = name.substr(0,255);
+    if (url.size() > 255) url = url.substr(0,255);
+    if (data.size() > 255) data = data.substr(0,255);
 
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, ecosystem);
+    PUSH_BACK_BYTES(payload, propertyType);
+    PUSH_BACK_BYTES(payload, previousPropertyId);
+    payload.insert(payload.end(), category.begin(), category.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), subcategory.begin(), subcategory.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), name.begin(), name.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), url.begin(), url.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    PUSH_BACK_BYTES(payload, amount);
+
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_SendNodeToken(uint32_t propertyId, uint64_t amount)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 0;
+    uint16_t messageVer = 0;
+    SwapByteOrder16(messageType);
+    SwapByteOrder16(messageVer);
+    SwapByteOrder32(propertyId);
+    SwapByteOrder64(amount);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    PUSH_BACK_BYTES(payload, amount);
+
+    return payload;
+}
 
 std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string did)
 {
     std::vector<unsigned char> payload;
     uint16_t messageVer = 0;
     uint16_t messageType = 0;   // depend simple send
+    uint16_t nregisterflag = 1;  //register node, value is 1 else is 0
     SwapByteOrder16(messageVer);
     SwapByteOrder16(messageType);
+    SwapByteOrder16(nregisterflag);
     SwapByteOrder32(propertyId);
     SwapByteOrder64(amount);
     if (vrfpubkey.size() > 255) vrfpubkey = vrfpubkey.substr(0,255);
@@ -570,9 +624,38 @@ std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, 
     PUSH_BACK_BYTES(payload, messageType);
     PUSH_BACK_BYTES(payload, propertyId);
     PUSH_BACK_BYTES(payload, amount);
+    PUSH_BACK_BYTES(payload, nregisterflag);
     payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
     payload.push_back('\0');
     payload.insert(payload.end(), did.begin(), did.end());
+    payload.push_back('\0');
+
+
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::string vrfpubkey, std::string keyid)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageVer = 0;
+    uint16_t messageType = 0;   // depend simple send
+    uint16_t nregisterflag = 0;
+    SwapByteOrder16(messageVer);
+    SwapByteOrder16(messageType);
+    SwapByteOrder16(nregisterflag);
+    SwapByteOrder32(propertyId);
+    SwapByteOrder64(amount);
+    if (vrfpubkey.size() > 255) vrfpubkey = vrfpubkey.substr(0,255);
+    if (keyid.size() > 255) keyid = keyid.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    PUSH_BACK_BYTES(payload, amount);
+    PUSH_BACK_BYTES(payload, nregisterflag);
+    payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), keyid.begin(), keyid.end());
     payload.push_back('\0');
 
     return payload;
@@ -599,3 +682,5 @@ std::vector<unsigned char> CreatePayload_RegisaterNodeByTxTest(std::string vrfpu
 
 #undef PUSH_BACK_BYTES
 #undef PUSH_BACK_BYTES_PTR
+
+
