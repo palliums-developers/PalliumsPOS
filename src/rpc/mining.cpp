@@ -1025,8 +1025,7 @@ UniValue startforging(const JSONRPCRequest& request)
         vecVrfPK.resize(32);
         vecVrfSK.resize(64);
         Selector::GetInstance().GetVrfKeypairFromPrivKey(&vecVrfPK[0],&vecVrfSK[0],delegatekey.begin());
-        std::string strVrfPK=HexStr(&vecVrfPK[0],&(*vecVrfSK.end()));
-        if(!(strVrfPK == DPoS::GetInstance().GetSuperForgerPK()) && Selector::GetInstance().GetDelegate(vecVrfPK).empty()) {
+        if(Selector::GetInstance().GetDelegate(vecVrfPK).empty()) {
             LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
             return "false";
         }

@@ -3254,9 +3254,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
     assert(pindexPrev != nullptr);
     const int nHeight = pindexPrev->nHeight + 1;
 
-    if(nHeight >= DPoS::GetInstance().GetStartDPoSHeight()) {
-        return true;
-    }
+    return true;
 
     // Check proof of work
     const Consensus::Params& consensusParams = params.GetConsensus();

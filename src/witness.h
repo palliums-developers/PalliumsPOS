@@ -79,9 +79,6 @@ public:
     static bool GetBlockForgerPK(std::vector<unsigned char>& pk, const CBlock& block);
     static bool GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block);
 
-    int32_t GetStartDPoSHeight() {return nDposStartHeight;}
-    std::string GetSuperForgerPK() {return cSuperForgerPK;}
-
     uint64_t GetStartTime() {return nDposStartTime;}
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
 
@@ -114,9 +111,8 @@ private:
     int nMaxMemory;                    //GB
     int nMaxDelegateNumber;
     int nBlockIntervalTime;            //seconds
-    int nDposStartHeight;
+    int nLoopRound;
     uint64_t nDposStartTime;
-    std::string cSuperForgerPK;
     std::string strIrreversibleBlockFileName;
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;

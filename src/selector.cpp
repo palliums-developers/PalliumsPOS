@@ -15,6 +15,18 @@ Selector& Selector::GetInstance()
 std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum, std::vector<unsigned char> vrfValue)
 {
     std::vector<Delegate> result;
+    uint64_t vote_num = vWitnessPublickeys.size()+nMinHoldBalance;
+    if(vrfValue == std::vector<unsigned char>(64,0)){
+        for(auto &s:vWitnessPublickeys){
+            std::vector<unsigned char> pk(ParseHex(s));
+            result.push_back(Delegate(pk,vote_num--));
+            if(result.size() >= nDelegateNum) {
+                break;
+            }
+        }
+        return result;
+    }
+
     std::map<CKeyID,std::vector<unsigned char>> delegates;
     for(auto &s:vWitnessPublickeys)
     {
@@ -28,7 +40,6 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uin
         delegates.insert(std::make_pair(keyid,pk));
     }
 
-    uint64_t vote_num=delegates.size()+nMinHoldBalance;
     for(auto it = delegates.rbegin(); it != delegates.rend(); ++it)
     {
         if(result.size() >= nDelegateNum) {
