@@ -207,8 +207,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "omni_getwalletaddressbalances", 0, "includewatchonly" },
 /* Omni Core - transaction calls */
     { "omni_send", 2, "propertyid" },
-    { "omni_registernodebytx", 2, "propertyid" },
-    { "omni_unregisternodebytx", 2, "propertyid" },
+    { "omni_registernodebytx", 1, "propertyid" },
+    { "omni_unregisternodebytx", 1, "propertyid" },
     { "omni_sendnodetoken", 2, "propertyid" },
     { "omni_sendsto", 1, "propertyid" },
     { "omni_sendsto", 4, "distributionproperty" },

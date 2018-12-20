@@ -212,10 +212,10 @@ std::vector<std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkey(uint32_t pr
 
     //1, get omni transaction list
 
-    int64_t nCount = 10;
+    int64_t nCount = 100;
     int64_t nFrom = 0;
     int64_t nStartBlock = 0;
-    int64_t nEndBlock = 999999999;
+    int64_t nEndBlock = (int)chainActive.Height();
 
     //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
     std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
@@ -270,10 +270,10 @@ std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkey()
     std::map<std::string, std::string> veVrfPubkeyDid;
 
     //1, get omni transaction list
-    int64_t nCount = 50;
+    int64_t nCount = 100;
     int64_t nFrom = 0;
     int64_t nStartBlock = 0;
-    int64_t nEndBlock = 999999999;
+    int64_t nEndBlock = (int)chainActive.Height();
 
     //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
     std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
@@ -324,7 +324,7 @@ std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkeyTe
     int64_t nCount = 100;
     int64_t nFrom = 0;
     int64_t nStartBlock = 0;
-    int64_t nEndBlock = 999999999;
+    int64_t nEndBlock = (int)chainActive.Height();
 
     //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
     std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
@@ -374,10 +374,10 @@ bool CNodeToken::IsKeyidRegister(const std::string& keyid)
     bool IsRegister = false;
 
     //1, get omni transaction list
-    int64_t nCount = 50;
+    int64_t nCount = 100;
     int64_t nFrom = 0;
     int64_t nStartBlock = 0;
-    int64_t nEndBlock = 999999999;
+    int64_t nEndBlock = (int)chainActive.Height();
 
     //obtain a sorted list of Omni layer wallet transactions (including STO receipts and pending)
     std::map<std::string,uint256> walletTransactions = FetchWalletOmniTransactions(nFrom+nCount, nStartBlock, nEndBlock);
