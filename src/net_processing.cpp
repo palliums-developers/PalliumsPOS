@@ -290,7 +290,7 @@ struct CNodeState {
         nBlocksInFlightValidHeaders = 0;
         fPreferredDownload = false;
         fPreferHeaders = false;
-        fPreferHeaderAndIDs = false;
+        fPreferHeaderAndIDs = true;
         fProvidesHeaderAndIDs = false;
         fHaveWitness = false;
         fWantsCmpctWitness = false;
@@ -494,6 +494,8 @@ static bool CanDirectFetch(const Consensus::Params &consensusParams) EXCLUSIVE_L
 
 static bool PeerHasHeader(CNodeState *state, const CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
+    if(pindex->nHeight == 0)
+        return true;
     if (state->pindexBestKnownBlock && pindex == state->pindexBestKnownBlock->GetAncestor(pindex->nHeight))
         return true;
     if (state->pindexBestHeaderSent && pindex == state->pindexBestHeaderSent->GetAncestor(pindex->nHeight))
@@ -1836,7 +1838,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             // cmpctblock messages.
             // We send this to non-NODE NETWORK peers as well, because
             // they may wish to request compact blocks from us
-            bool fAnnounceUsingCMPCTBLOCK = false;
+            bool fAnnounceUsingCMPCTBLOCK = true;
             uint64_t nCMPCTBLOCKVersion = 2;
             if (pfrom->GetLocalServices() & NODE_WITNESS)
                 connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SENDCMPCT, fAnnounceUsingCMPCTBLOCK, nCMPCTBLOCKVersion));

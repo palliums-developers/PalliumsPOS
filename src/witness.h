@@ -17,9 +17,13 @@ extern bool fUseIrreversibleBlock;
 
 struct Delegate{
     std::vector<unsigned char> vrfpk;
-    uint64_t votes;
-    Delegate(){votes = 0;}
-    Delegate(std::vector<unsigned char> &vrfpk, uint64_t votes) {this->vrfpk = vrfpk; this->votes = votes;}
+    Delegate(){}
+    Delegate(std::vector<unsigned char> &vrfpk) {
+        this->vrfpk = vrfpk;
+    }
+    bool operator==(const Delegate& delegate)const{
+        return this->vrfpk == delegate.vrfpk;
+    }
 };
 
 struct VrfInfo{
@@ -29,6 +33,9 @@ struct VrfInfo{
 
 struct DelegateInfo{
     std::vector<Delegate> delegates;
+//    bool operator==(DelegateInfo& cDelegateInfo){
+//        return this->delegates == cDelegateInfo.delegates;
+//    }
 };
 
 const int nMaxConfirmBlockCount = 2;
@@ -56,14 +63,12 @@ public:
     bool IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> &vpk, const std::vector<unsigned char> &vsk, time_t t);
 
     DelegateInfo GetNextDelegates(std::vector<unsigned char> &vrfValue);
-    bool GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex);
-    bool GetBlockDelegates(DelegateInfo& cDelegateInfo, const CBlock& block);
-    bool CheckBlockDelegate(const CBlock& block);
-    std::vector<unsigned char> GetBlockVRF(const CBlock& block);
-    std::vector<unsigned char> GetBlockVRF(CBlockIndex* pBlockIndex);
+    bool CheckBlockDelegate(DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo);
+    std::vector<unsigned char> GetVRFValue(VrfInfo &vrfInfo);
     bool CheckBlockHeader(const CBlockHeader& block);
     bool CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo);
-    bool CheckCoinbase(const CTransaction& tx, const CBlock& block);
+    bool CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo);
+    bool CheckCoinbase(const CTransaction& tx, DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo);
 
     uint64_t GetLoopIndex(uint64_t time);
     uint32_t GetDelegateIndex(uint64_t time);
@@ -71,18 +76,14 @@ public:
     static bool DataToDelegate(DelegateInfo& cDelegateInfo, const std::string& data);
     static std::string DelegateToData(const DelegateInfo& cDelegateInfo);
 
-//    static bool ScriptToDelegateInfo(DelegateInfo& cDelegateInfo, uint64_t t, const CScript& script, const CTxDestination* paddress, bool fCheck);
     static bool VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInfo, const CScript& script);
-//    static CScript DelegateInfoToScript(const DelegateInfo& cDelegateInfo, const CKey& delegatekey, uint64_t t);
     static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& vrf_pk, const std::vector<unsigned char>& vrf_sk);
-
-    static bool GetBlockForgerPK(std::vector<unsigned char>& pk, const CBlock& block);
-    static bool GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block);
 
     uint64_t GetStartTime() {return nDposStartTime;}
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
 
     int GetMaxMemory() {return nMaxMemory;}
+    CBlock& GetLastBestBlock(){return lastBestblock;}
 
     IrreversibleBlockInfo GetIrreversibleBlockInfo();
     void SetIrreversibleBlockInfo(const IrreversibleBlockInfo& info);
@@ -100,11 +101,7 @@ public:
     const int nFirstIrreversibleThreshold = 90;
     const int nSecondIrreversibleThreshold = 67;
     const int nMaxIrreversibleCount = 1000;
-
 private:
-    bool CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo);
-    std::vector<Delegate> SortDelegate(const std::vector<Delegate>& delegates, uint64_t t);
-
     bool IsOnTheSameChain(const std::pair<int64_t, uint256>& first, const std::pair<int64_t, uint256>& second);
 
 private:
@@ -116,6 +113,8 @@ private:
     std::string strIrreversibleBlockFileName;
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;
+    DelegateInfo cCurrentDelegateInfo;
+    CBlock lastBestblock;
 };
 
 #endif // BITCOIN_WITNESS_H

@@ -9,7 +9,7 @@ class Delegate;
 class Selector{
 public:
     static Selector& GetInstance();
-    std::vector<Delegate> GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum, std::vector<unsigned char> vrfValue);
+    std::vector<Delegate> GetTopDelegateInfo(uint32_t nDelegateNum, std::vector<unsigned char> vrfValue);
     void DeleteInvalidVote(uint64_t height);
     CKeyID GetDelegate(const std::string& name);
     std::string GetDelegate(const std::vector<unsigned char>& vrfpubkey);

@@ -1000,8 +1000,8 @@ UniValue startforging(const JSONRPCRequest& request)
             "\nResult:\n"
             "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
             "\nExamples:\n"
-            + HelpExampleCli("startforging", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
-            + HelpExampleRpc("startforging", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+            + HelpExampleCli("startforging", "\"0329d5bb92f897564cbc5af9f31def053f015b940d0eea7f014ee42a4ee489d44c\"")
+            + HelpExampleRpc("startforging", "\"0329d5bb92f897564cbc5af9f31def053f015b940d0eea7f014ee42a4ee489d44c\"")
     );
 
     LOCK(cs_mining);

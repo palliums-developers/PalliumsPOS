@@ -12,14 +12,13 @@ Selector& Selector::GetInstance()
     return selector;
 }
 
-std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uint32_t nDelegateNum, std::vector<unsigned char> vrfValue)
+std::vector<Delegate> Selector::GetTopDelegateInfo(uint32_t nDelegateNum, std::vector<unsigned char> vrfValue)
 {
     std::vector<Delegate> result;
-    uint64_t vote_num = vWitnessPublickeys.size()+nMinHoldBalance;
     if(vrfValue == std::vector<unsigned char>(64,0)){
         for(auto &s:vWitnessPublickeys){
             std::vector<unsigned char> pk(ParseHex(s));
-            result.push_back(Delegate(pk,vote_num--));
+            result.push_back(Delegate(pk));
             if(result.size() >= nDelegateNum) {
                 break;
             }
@@ -46,7 +45,7 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint64_t nMinHoldBalance, uin
             break;
         }
         //TODO:vote num auto detect
-        result.push_back(Delegate(it->second,vote_num--));
+        result.push_back(Delegate(it->second));
     }
     return result;
 }

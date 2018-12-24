@@ -2456,13 +2456,6 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
 
-        if( !DPoS::GetInstance().CheckBlock(*pindexNew, true) ) {
-            state.DoS(50, false, REJECT_INVALID, "DPoS CheckBlock hash error");
-            InvalidBlockFound(pindexNew, state);
-            LogPrintf("ConnectTip(): DPoS CheckBlock hash: %s error\n", pindexNew->GetBlockHash().ToString().c_str());
-            return error("ConnectTip(): DPoS CheckBlock hash: %s error\n", pindexNew->GetBlockHash().ToString());
-        }
-
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
         LogPrint(BCLog::BENCH, "  - Connect total: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime3 - nTime2) * MILLI, nTimeConnectTotal * MICRO, nTimeConnectTotal * MILLI / nBlocksTotal);
         bool flushed = view.Flush();
@@ -3169,6 +3162,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
 
+    if( !DPoS::GetInstance().CheckBlock(block, true) ) {
+        state.DoS(50, false, REJECT_INVALID, "DPoS CheckBlock hash error");
+        LogPrintf("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
+        return error("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
+    }
+
     return true;
 }
 
@@ -3548,7 +3547,8 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
-    if (!IsInitialBlockDownload() && chainActive.Tip() == pindex->pprev)
+//    if (!IsInitialBlockDownload() && chainActive.Tip() == pindex->pprev)
+    if (chainActive.Tip() == pindex->pprev)
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
 
     // Write block to history file

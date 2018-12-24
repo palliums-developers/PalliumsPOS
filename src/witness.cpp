@@ -8,6 +8,7 @@
 #include <wallet/wallet.h>
 #include <vrf/crypto_vrf.h>
 
+
 bool fUseIrreversibleBlock = true;
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
@@ -17,6 +18,7 @@ typedef boost::unique_lock<boost::shared_mutex> write_lock;
 static DPoS gDPoS;
 static DPoS *gpDPoS = nullptr;
 
+
 DPoS::~DPoS()
 {
     WriteIrreversibleBlockInfo(cIrreversibleBlockInfo);
@@ -24,7 +26,7 @@ DPoS::~DPoS()
 
 #define BLOCK_INTERVAL_TIME 5
 #define MAX_DELEGATE_NUM 3
-#define LOOP_ROUND 1
+#define LOOP_ROUND 3
 
 void DPoS::Init()
 {
@@ -70,11 +72,14 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char
     uint64_t nPrevLoopIndex = GetLoopIndex(pBlockIndex->nTime);
     uint32_t nPrevDelegateIndex = GetDelegateIndex(pBlockIndex->nTime);
 
+    LogPrintf("IsMining: nCurrentLoopIndex %d, nCurrentDelegateIndex %d, nPrevLoopIndex %d, nPrevDelegateIndex %d\n",nCurrentLoopIndex, nCurrentDelegateIndex, nPrevLoopIndex, nPrevDelegateIndex);
+
     if(pBlockIndex->nHeight == 0){
         std::vector<unsigned char> veInit(64,0);
         cDelegateInfo = DPoS::GetNextDelegates(veInit);
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-            LogPrintf("IsMining: true, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
+            LogPrintf("IsMining0: true\n");
+            cCurrentDelegateInfo = cDelegateInfo;
             return true;
         } else {
             return false;
@@ -83,50 +88,52 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char
     if(nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound == 0) {
         std::vector<unsigned char> vecNewProof;
         std::vector<unsigned char> vecNewVrfValue;
-        if(!CreateVrfProof(pBlockIndex,vsk,vecNewProof))
+        if(!CreateVrfProof(pBlockIndex,vsk,vecNewProof)){
+            LogPrintf("IsMining1: CreateVrfProof false\n");
             return false;
-        if(!VerifyVrfProof(pBlockIndex, vecNewVrfValue, vpk, vecNewProof))
+        }
+        if(!VerifyVrfProof(pBlockIndex, vecNewVrfValue, vpk, vecNewProof)){
+            LogPrintf("IsMining1: VerifyVrfProof false\n");
             return false;
+        }
         cDelegateInfo = DPoS::GetNextDelegates(vecNewVrfValue);
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-            LogPrintf("IsMining1: true, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
+            LogPrintf("IsMining1: true\n");
+            cCurrentDelegateInfo = cDelegateInfo;
             return true;
         } else {
-            LogPrintf("IsMining1: false, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
+            LogPrintf("IsMining1: false,pk=%s\n", HexStr(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
             return false;
         }
     } else if((nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex) || (nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound != 0)) {
-        DelegateInfo cCurrentDelegateInfo;
-        if(GetBlockDelegates(cCurrentDelegateInfo, pBlockIndex)) {
-            if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
-                return false;
-            } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-                LogPrintf("IsMining2: true, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
-                return true;
-            } else {
-                LogPrintf("IsMining2: true, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
-                return false;
-            }
+        if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
+            LogPrintf("IsMining2: false\n");
+            return false;
+        } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
+            LogPrintf("IsMining2: true\n");
+            cDelegateInfo = cCurrentDelegateInfo;
+            return true;
         } else {
+            LogPrintf("IsMining2: false,pk=%s\n", HexStr(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
             return false;
         }
     } else {
+        LogPrintf("IsMining3: false\n");
         return false;
     }
-
+    LogPrintf("IsMining4: false\n");
     return false;
 }
 
 DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> &vrfValue)
 {
-    uint64_t nMinHoldBalance = 500000000000;
     DelegateInfo cDelegateInfo;
 
-    cDelegateInfo.delegates = Selector::GetInstance().GetTopDelegateInfo(nMinHoldBalance, nMaxDelegateNumber,vrfValue);
+    cDelegateInfo.delegates = Selector::GetInstance().GetTopDelegateInfo(nMaxDelegateNumber,vrfValue);
 
     LogPrintf("DPoS: GetNextDelegates start\n");
     for(auto i : cDelegateInfo.delegates)
-        LogPrintf("DPoS: delegate %s %lu\n", HexStr(&(*i.vrfpk.begin()),&(*i.vrfpk.end())), i.votes);
+        LogPrintf("DPoS: delegate %s\n", HexStr(&(*i.vrfpk.begin()),&(*i.vrfpk.end())));
     LogPrintf("DPoS: GetNextDelegates end\n");
 
     cDelegateInfo.delegates.resize(nMaxDelegateNumber);
@@ -134,30 +141,6 @@ DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> &vrfValue)
     return cDelegateInfo;
 }
 
-bool DPoS::GetBlockDelegates(DelegateInfo& cDelegateInfo, CBlockIndex* pBlockIndex)
-{
-    bool ret = false;
-    if(pBlockIndex && pBlockIndex->pprev) {
-        CBlock block;
-        if(ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())) {
-            ret = GetBlockDelegate(cDelegateInfo, block);
-        }
-    }
-    return ret;
-}
-
-bool DPoS::GetBlockDelegates(DelegateInfo& cDelegateInfo, const CBlock& block)
-{
-    CBlockIndex blockindex;
-    blockindex.nTime = block.nTime;
-    BlockMap::iterator miSelf = mapBlockIndex.find(block.hashPrevBlock);
-    if(miSelf == mapBlockIndex.end()) {
-        LogPrintf("GetBlockDelegates find blockindex(%s) error\n", block.hashPrevBlock.ToString().c_str());
-        return false;
-    }
-    blockindex.pprev = miSelf->second;
-    return GetBlockDelegates(cDelegateInfo, &blockindex);
-}
 
 uint64_t DPoS::GetLoopIndex(uint64_t time)
 {
@@ -177,17 +160,13 @@ uint32_t DPoS::GetDelegateIndex(uint64_t time)
     }
 }
 
-bool DPoS::CheckCoinbase(const CTransaction& tx, const CBlock& block)
+bool DPoS::CheckCoinbase(const CTransaction& tx, DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo)
 {
-    bool ret = false;
-    if(tx.vout.size() == 3) {
-        ret = VRFScriptToDelegateInfo(nullptr, nullptr, tx.vout[1].scriptPubKey);
-    }
-
-    if(ret == false) {
+    if(!VRFScriptToDelegateInfo(&cDelegateInfo, &vrfInfo, tx.vout[1].scriptPubKey)){
         LogPrintf("CheckCoinbase txhash:%s failed!", tx.GetHash().ToString());
+        return false;
     }
-    return ret;
+    return true;
 }
 
 
@@ -253,7 +232,7 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
                     uint32_t nDelegateNum = (data.size() - (1)) / (32);
                     for(unsigned int i =0; i < nDelegateNum; ++i) {
                         std::vector<unsigned char> vct(pData, pData + 32);
-                        pDelegateInfo->delegates.push_back(Delegate(vct, 0));
+                        pDelegateInfo->delegates.push_back(Delegate(vct));
                         pData += 32;
                     }
                 }
@@ -264,70 +243,19 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
     return true;
 }
 
-bool DPoS::GetBlockForgerPK(std::vector<unsigned char>& pk, const CBlock& block)
-{
-    auto& tx = block.vtx[0];
-    if(tx->IsCoinBase() && tx->vout.size() == 3) {
-        DelegateInfo cDelegateInfo;
-        VrfInfo vrfInfo;
-        if(VRFScriptToDelegateInfo(nullptr, &vrfInfo, tx->vout[1].scriptPubKey)){
-            pk=vrfInfo.pk;
-            return true;
-        }
-    }
-    return false;
-}
-
-std::vector<unsigned char> DPoS::GetBlockVRF(const CBlock& block)
+std::vector<unsigned char> DPoS::GetVRFValue(VrfInfo &vrfInfo)
 {
     std::vector<unsigned char> vecVrfValue;
-
-    auto tx = block.vtx[0];
-    if(tx->IsCoinBase() && tx->vout.size() == 3) {
-        auto script = tx->vout[1].scriptPubKey;
-        VrfInfo vrfInfo;
-        if(VRFScriptToDelegateInfo(nullptr, &vrfInfo, script)){
-            vecVrfValue.resize(64);
-            crypto_vrf_proof_to_hash(&vecVrfValue[0], &vrfInfo.proof[0]);
-        }
-    }
+    vecVrfValue.resize(64);
+    crypto_vrf_proof_to_hash(&vecVrfValue[0], &vrfInfo.proof[0]);
     return vecVrfValue;
 }
 
-std::vector<unsigned char> DPoS::GetBlockVRF(CBlockIndex* pBlockIndex)
+
+bool DPoS::CheckBlockDelegate(DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo)
 {
-    std::vector<unsigned char> vecVrfValue;
-    if(pBlockIndex && pBlockIndex->pprev) {
-        CBlock block;
-        if(ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())) {
-            vecVrfValue = GetBlockVRF(block);
-        }
-    }
-    return vecVrfValue;
-}
-
-bool DPoS::GetBlockDelegate(DelegateInfo& cDelegateInfo, const CBlock& block)
-{
-    bool ret = false;
-
-    auto tx = block.vtx[0];
-    if(tx->IsCoinBase() && tx->vout.size() == 3) {
-        auto script = tx->vout[1].scriptPubKey;
-        ret = VRFScriptToDelegateInfo(&cDelegateInfo, nullptr, script);
-    }
-    return ret;
-}
-
-bool DPoS::CheckBlockDelegate(const CBlock& block)
-{
-    DelegateInfo cDelegateInfo;
-    if(DPoS::GetBlockDelegate(cDelegateInfo, block) == false) {
-        LogPrintf("CheckBlockDelegate GetBlockDelegate hash:%s error\n", block.GetHash().ToString().c_str());
-        return false;
-    }
-
     bool ret = true;
-    std::vector<unsigned char> vecVrfValue = GetBlockVRF(block);
+    std::vector<unsigned char> vecVrfValue = GetVRFValue(vrfInfo);
     DelegateInfo cNextDelegateInfo = GetNextDelegates(vecVrfValue);
     if(cDelegateInfo.delegates.size() == cNextDelegateInfo.delegates.size()) {
         for(unsigned int i =0; i < cDelegateInfo.delegates.size(); ++i) {
@@ -337,17 +265,15 @@ bool DPoS::CheckBlockDelegate(const CBlock& block)
             }
         }
     }
-
     if(ret == false) {
         for(unsigned int i =0; i < cDelegateInfo.delegates.size(); ++i) {
             LogPrintf("CheckBlockDelegate BlockDelegate[%u]: %s\n", i, HexStr(cDelegateInfo.delegates[i].vrfpk));
         }
 
         for(unsigned int i =0; i < cNextDelegateInfo.delegates.size(); ++i) {
-            LogPrintf("CheckBlockDelegate NextBlockDelegate[%u]: %s %llu\n", i, HexStr(cNextDelegateInfo.delegates[i].vrfpk), cNextDelegateInfo.delegates[i].votes);
+            LogPrintf("CheckBlockDelegate NextBlockDelegate[%u]: %s\n", i, HexStr(cNextDelegateInfo.delegates[i].vrfpk));
         }
     }
-
     return ret;
 }
 
@@ -369,7 +295,7 @@ bool DPoS::CheckBlockHeader(const CBlockHeader& block)
 bool DPoS::CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo)
 {
     CBlock block;
-    if(ReadBlockFromDisk(block, &blockindex, Params().GetConsensus()) == false) {
+    if(!ReadBlockFromDisk(block, &blockindex, Params().GetConsensus())) {
         return false;
     }
 
@@ -378,6 +304,7 @@ bool DPoS::CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo)
         LogPrintf("CheckBlock: false");
         return false;
     }
+    lastBestblock = block;
     return true;
 }
 
@@ -390,6 +317,7 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     }
 
     if(block.hashPrevBlock.IsNull()) {
+        lastBestblock = block;
         return true;
     }
 
@@ -402,8 +330,9 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     CBlockIndex* pPrevBlockIndex = miSelf->second;
 
     int64_t nBlockHeight = pPrevBlockIndex->nHeight + 1;
-
-    if(CheckCoinbase(*block.vtx[0], block) == false) {
+    DelegateInfo cDelegateInfo;
+    VrfInfo vrfInfo;
+    if(CheckCoinbase(*block.vtx[0], cDelegateInfo, vrfInfo) == false) {
         LogPrintf("CheckBlock CheckCoinbase error\n");
         return false;
     }
@@ -416,37 +345,36 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     uint32_t nCurrentDelegateIndex = GetDelegateIndex(block.nTime);
 
     uint64_t nPrevLoopIndex = GetLoopIndex(pPrevBlockIndex->nTime);
-    uint32_t nPrevDelegateIndex = GetDelegateIndex(pPrevBlockIndex->nTime);
 
-    LogPrintf("CheckBlock: true, nCurrentLoopIndex %d, nPrevLoopIndex %d, nCurrentDelegateIndex %d ,nPrevDelegateIndex %d",nCurrentLoopIndex, nPrevLoopIndex,nCurrentDelegateIndex,nPrevDelegateIndex);
+    LogPrintf("CheckBlock: nCurrentLoopIndex %d, nCurrentDelegateIndex %d\n",nCurrentLoopIndex, nCurrentDelegateIndex);
 
     bool ret = false;
-    DelegateInfo cDelegateInfo;
-    if(nCurrentLoopIndex == 0) {
+    if(nBlockHeight == 1) {
         std::vector<unsigned char> veInit(64,0);
         cDelegateInfo = DPoS::GetNextDelegates(veInit);
+        cCurrentDelegateInfo = cDelegateInfo;
     }
     else if(nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound == 0) {
         if(fIsCheckDelegateInfo) {
-            if(CheckBlockDelegate(block) == false) {
+            if(CheckBlockDelegate(cDelegateInfo,vrfInfo) == false) {
                 return false;
             }
+            cCurrentDelegateInfo = cDelegateInfo;
             ProcessIrreversibleBlock(nBlockHeight, block.GetHash());
         }
-        GetBlockDelegate(cDelegateInfo, block);
-    } else if((nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex) || (nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound != 0)){
-        GetBlockDelegates(cDelegateInfo, pPrevBlockIndex);
+        else
+            cCurrentDelegateInfo = cDelegateInfo;
     }
 
-    std::vector<unsigned char> delegate;
-    GetBlockForgerPK(delegate, block);
-    if(nCurrentDelegateIndex < cDelegateInfo.delegates.size()
-            && cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == delegate) {
+    if(nCurrentDelegateIndex < cDelegateInfo.delegates.size() && cDelegateInfo.delegates == cCurrentDelegateInfo.delegates
+            && cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vrfInfo.pk) {
+        LogPrintf("CheckBlock:true\n");
         ret = true;
     } else {
         LogPrintf("CheckBlock GetDelegateID blockhash:%s error\n", block.ToString().c_str());
     }
-
+    if(ret == true)
+        lastBestblock = block;
     return ret;
 }
 
@@ -551,10 +479,6 @@ void DPoS::ProcessIrreversibleBlock(int64_t height, uint256 hash)
                     AddIrreversibleBlock(cIrreversibleBlockInfo.heights[i], cIrreversibleBlockInfo.hashs[i]);
                     LogPrintf("First NewIrreversibleBlock height:%ld hash:%s\n", cIrreversibleBlockInfo.heights[i], cIrreversibleBlockInfo.hashs[i].ToString().c_str());
 
-                    //TODO:vote irreversible fix
-                    //                    Vote::GetInstance().GetCommittee().NewIrreversibleBlock(cIrreversibleBlockInfo.heights[i]);
-                    //                    Vote::GetInstance().GetBill().NewIrreversibleBlock(cIrreversibleBlockInfo.heights[i]);
-
                     for(auto k = 0; k < nMaxConfirmBlockCount; ++k) {
                         cIrreversibleBlockInfo.heights[k] = -1;
                     }
@@ -565,10 +489,6 @@ void DPoS::ProcessIrreversibleBlock(int64_t height, uint256 hash)
                     if(i == nMaxConfirmBlockCount - 1) {
                         AddIrreversibleBlock(cIrreversibleBlockInfo.heights[i], cIrreversibleBlockInfo.hashs[i]);
                         LogPrintf("Second NewIrreversibleBlock height:%ld hash:%s\n", cIrreversibleBlockInfo.heights[i], cIrreversibleBlockInfo.hashs[i].ToString().c_str());
-
-                        //TODO:vote irreversible fix
-                        //                        Vote::GetInstance().GetCommittee().NewIrreversibleBlock(cIrreversibleBlockInfo.heights[i]);
-                        //                        Vote::GetInstance().GetBill().NewIrreversibleBlock(cIrreversibleBlockInfo.heights[i]);
 
                         for(int j = 0; j < nMaxConfirmBlockCount -1; ++j) {
                             cIrreversibleBlockInfo.heights[j] = cIrreversibleBlockInfo.heights[j+1];
@@ -639,19 +559,22 @@ bool DPoS::VerifyVrfProof(CBlockIndex* pBlockIndex, std::vector<unsigned char> &
 {
     if(pBlockIndex){
         CBlock block;
-        if (ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())){
-             std::vector<unsigned char> msg;
-            if(!CreateVrfData(block, msg)){
-                LogPrintf("VerifyVrfProof: CreateVrfData() error");
-                return false;
-            }
-            output.resize(64);
-            if (crypto_vrf_verify(&output[0], &pk[0], &proof[0], &msg[0], msg.size()) != 0){
-                LogPrintf("VerifyVrfProof: crypto_vrf_verify() error");
-                return false;
-            }
-            return true;
+        if(DPoS::GetInstance().GetLastBestBlock().GetHash() == *pBlockIndex->phashBlock)
+             block = DPoS::GetInstance().GetLastBestBlock();
+        else if (!ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())){
+            return false;
         }
+        std::vector<unsigned char> msg;
+        if(!CreateVrfData(block, msg)){
+            LogPrintf("VerifyVrfProof: CreateVrfData() error");
+            return false;
+        }
+        output.resize(64);
+        if (crypto_vrf_verify(&output[0], &pk[0], &proof[0], &msg[0], msg.size()) != 0){
+            LogPrintf("VerifyVrfProof: crypto_vrf_verify() error");
+            return false;
+        }
+        return true;
     }
     return false;
 }
@@ -685,9 +608,14 @@ bool DPoS::CreateVrfProof(CBlockIndex* pBlockIndex, const std::vector<unsigned c
 {
     if(pBlockIndex){
         CBlock block;
-        if (ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus()))
-            return CreateVrfProof(block, vsk, proof);
+        if(DPoS::GetInstance().GetLastBestBlock().GetHash() == *pBlockIndex->phashBlock)
+            block = DPoS::GetInstance().GetLastBestBlock();
+        else if (!ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())){
+            return false;
+        }
+        return CreateVrfProof(block, vsk, proof);
     }
+    return false;
 }
 
 bool DPoS::CreateVrfProof(const CBlock &block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof)
@@ -703,6 +631,5 @@ bool DPoS::CreateVrfProof(const CBlock &block, const std::vector<unsigned char>&
         LogPrintf("CreateVrfProof: crypto_vrf_prove() error");
         return false;
     }
-
     return true;
 }
