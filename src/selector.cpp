@@ -26,18 +26,25 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint32_t nDelegateNum, std::v
         return result;
     }
 
-    std::map<CKeyID,std::vector<unsigned char>> delegates;
+    std::vector<std::vector<unsigned char>> delegates;
     for(auto &s:vWitnessPublickeys)
     {
         std::vector<unsigned char> pk(ParseHex(s));
-        std::vector<unsigned char> data(vrfValue.begin(),vrfValue.end());
-        data.insert(data.end(),pk.begin(),pk.end());
-        auto keyid = CKeyID(Hash160(data));
-        if (keyid.IsNull()) {
-            continue;
-        }
-        delegates.insert(std::make_pair(keyid,pk));
+        delegates.push_back(pk);
     }
+    sort(delegates.begin(), delegates.end(), [&](const std::vector<unsigned char> &pk1, const std::vector<unsigned char> &pk2)
+    {
+        std::vector<unsigned char> data1(vrfValue.begin(),vrfValue.end());
+        data1.insert(data1.end(),pk1.begin(),pk1.end());
+        std::vector<unsigned char> data2(vrfValue.begin(),vrfValue.end());
+        data2.insert(data2.end(),pk2.begin(),pk2.end());
+        if(Hash160(data1) < Hash160(data2))
+            return true;
+        if(Hash160(data1) == Hash160(data2))
+            return true;
+        return false;
+    }
+    );
 
     for(auto it = delegates.rbegin(); it != delegates.rend(); ++it)
     {
@@ -45,7 +52,7 @@ std::vector<Delegate> Selector::GetTopDelegateInfo(uint32_t nDelegateNum, std::v
             break;
         }
         //TODO:vote num auto detect
-        result.push_back(Delegate(it->second));
+        result.push_back(Delegate(*it));
     }
     return result;
 }

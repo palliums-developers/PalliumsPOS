@@ -774,7 +774,7 @@ static UniValue estimatefee(const JSONRPCRequest& request)
 
 static UniValue estimatesmartfee(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
+    if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
             "estimatesmartfee conf_target (\"estimate_mode\")\n"
             "\nEstimates the approximate fee per kilobyte needed for a transaction to begin\n"
@@ -947,7 +947,6 @@ void* ThreadDelegating(void *arg)
     DPoS& dPos = DPoS::GetInstance();
 
     CPubKey pubkey = delegatekey.GetPubKey();
-    std::vector<unsigned char> dd;
     CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << ToByteVector(pubkey.GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     std::vector<unsigned char> vctPublicKey;
@@ -959,11 +958,11 @@ void* ThreadDelegating(void *arg)
         do {
             time_t t = time(nullptr);
             DelegateInfo cDelegateInfo;
-
-            if(!dPos.IsMining(cDelegateInfo, vecVrfPK, vecVrfSK, t)){
+            std::vector<unsigned char> proof;
+            if(!dPos.IsMining(cDelegateInfo, proof, vecVrfPK, vecVrfSK, t)){
                 break;
             }
-            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, vecVrfPK, vecVrfSK), t);
+            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, proof, vecVrfPK, vecVrfSK), t);
             if(pblock) {
                 unsigned int extraNonce = 0;
                 {
@@ -974,9 +973,11 @@ void* ThreadDelegating(void *arg)
 
                 if(ProcessNewBlock(Params(), blockptr, true, nullptr) == false) {
                     LogPrintf("ProcessNewBlock failed");
+                    printf("ProcessNewBlock failed\n");
                 }
-
-                printf("mining addr:%s height:%u time:%lu starttime:%lu...\n", EncodeDestination(keyid).c_str(), chainActive.Height(), t, DPoS::GetInstance().GetStartTime());
+                uint64_t nCurrentLoopIndex = dPos.GetLoopIndex(blockptr->nTime);
+                uint32_t nCurrentDelegateIndex = dPos.GetDelegateIndex(blockptr->nTime);
+                printf("mining addr:%s height:%u nCurrentLoopIndex %d nCurrentDelegateIndex %d time:%lu starttime:%lu...\n", EncodeDestination(keyid).c_str(), chainActive.Height(), nCurrentLoopIndex, nCurrentDelegateIndex, t, DPoS::GetInstance().GetStartTime());
             }
         } while(0);
         sleep(1);
@@ -989,7 +990,7 @@ UniValue startforging(const JSONRPCRequest& request)
     std::shared_ptr<CWallet> const wallet = GetWallet("");
     CWallet* const pwallet = wallet.get();
 
-    if (request.fHelp || request.params.size() > 2)
+    if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
             "startforging delegatePublicKey"
             "\nstart forging on the sinnga publickey which have been registered as delegate"

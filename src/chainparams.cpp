@@ -283,7 +283,7 @@ class CRegTestParams : public CChainParams {
 public:
     CRegTestParams() {
         strNetworkID = "regtest";
-        consensus.nSubsidyHalvingInterval = 150;
+        consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP16Exception = uint256();
         consensus.BIP34Height = 100000000; // BIP34 has not activated on regtest (far in the future so block v1 are not rejected in tests)
         consensus.BIP34Hash = uint256();
@@ -356,119 +356,6 @@ public:
     }
 };
 
-class CMyNewNetParams : public CChainParams {
-public:
-    CMyNewNetParams() {
-        strNetworkID = "mynewnet";
-        consensus.nSubsidyHalvingInterval = 150;
-        consensus.BIP16Exception = uint256();
-        consensus.BIP34Height = 100000000; // BIP34 has not activated on regtest (far in the future so block v1 are not rejected in tests)
-        consensus.BIP34Hash = uint256();
-        consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)
-        consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
-        consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
-        consensus.nPowTargetSpacing = 10 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = true;
-        consensus.nRuleChangeActivationThreshold = 108; // 75% for testchains
-        consensus.nMinerConfirmationWindow = 144; // Faster than normal for regtest (144 instead of 2016)
-        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-
-        // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x00");
-
-        // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x00");
-
-        /**
-         * The message start string is designed to be unlikely to occur in normal data.
-         * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
-         * a large 32-bit integer with any alignment.
-         */
-        pchMessageStart[0] = 0xa3;
-        pchMessageStart[1] = 0xbd;
-        pchMessageStart[2] = 0x34;
-        pchMessageStart[3] = 0xd0;
-        nDefaultPort = 28444;
-        nPruneAfterHeight = 100000;
-
-        // genesis = CreateGenesisBlock(1231006505, 2083236893, 0x1d00ffff, 1, 50 * COIN);
-
-		/********** miner genesis block***************/
-		// fprintf(stderr, "*********** recalculating params for MyNewNet ***********\n");
-		// const char* pszTimestamp = "The Underwater Engineering Feat of the 19th Century: The Transatlantic Cable";
-		// const CScript genesisOutputScript = CScript() << ParseHex("043489b47791f4f4d28286703b0fde91e2057db4c1db6d6062d8ba4ef395113f3c9d6ab50d84d3a4132fdfc4c7239187cacf4bede74f2f49d8cdb118e990f28562") << OP_CHECKSIG;
-		// uint32_t nNonce = 0;
-		
-		// do {
-		// 	genesis = CreateGenesisBlock(pszTimestamp, genesisOutputScript, 1537242843, nNonce, 0x1d00ffff, 1, 50 * COIN);
-
-		// 	if (genesis.GetHash().ToString().compare("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff") < 0) {
-		// 		fprintf(stderr, "New genesis nonce: %s\n", std::to_string(genesis.nNonce).c_str());
-		// 		fprintf(stderr, "New genesis merkle root: %s\n", genesis.hashMerkleRoot.ToString().c_str());
-		// 		fprintf(stderr, "New genesis hash: %s\n", genesis.GetHash().ToString().c_str());
-				
-		// 		break;
-		// 	}
-
-		// 	++nNonce;
-		// }
-		// while (nNonce != 0);
-		
-		// fprintf(stderr, "*********** calculating finish ***********");
-		/*********************************************/
-
-		const char* pszTimestamp = "The Underwater Engineering Feat of the 19th Century: The Transatlantic Cable";
-		const CScript genesisOutputScript = CScript() << ParseHex("043489b47791f4f4d28286703b0fde91e2057db4c1db6d6062d8ba4ef395113f3c9d6ab50d84d3a4132fdfc4c7239187cacf4bede74f2f49d8cdb118e990f28562") << OP_CHECKSIG;
-		genesis = CreateGenesisBlock(pszTimestamp, genesisOutputScript, 1537242843, 748668401, 0x1d00ffff, 1, 50 * COIN);
-		
-        consensus.hashGenesisBlock = genesis.GetHash();
-		assert(consensus.hashGenesisBlock == uint256S("0x000000001b9b5951c8307b4d439b41f7d4ba88ad015f7d5b92f7b9287052d686"));
-        assert(genesis.hashMerkleRoot == uint256S("0x59e07786f884ee7fe1452fd211e50c73d6b57722bc326d8ee61d4cdebbbec009"));
-
-        vSeeds.clear();
-
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,128);
-        base58Prefixes[EXT_PUBLIC_KEY] = {0xcf, 0xd7, 0x34, 0x8a};
-        base58Prefixes[EXT_SECRET_KEY] = {0xcf, 0xd7, 0x3b, 0x7f};
-
-        bech32_hrp = "mnbc";
-
-        vFixedSeeds.clear();
-
-        fDefaultConsistencyChecks = false;
-        fRequireStandard = true;
-        fMineBlocksOnDemand = false;
-
-        checkpointData = {
-            {
-                {0, uint256S("0x000000001b9b5951c8307b4d439b41f7d4ba88ad015f7d5b92f7b9287052d686")},
-            }
-        };
-
-        chainTxData = ChainTxData{
-            // Data from rpc: getchaintxstats 4096 0000000000000000002e63058c023a9a1de233554f28c7b21380b6c9003f36a8
-            /* nTime    */ 1537242843,
-            /* nTxCount */ 0,
-            /* dTxRate  */ 0
-        };
-
-        /* disable fallback fee on mainnet */
-        m_fallback_fee_enabled = false;
-    }
-};
-
 static std::unique_ptr<CChainParams> globalChainParams;
 
 const CChainParams &Params() {
@@ -484,8 +371,6 @@ std::unique_ptr<CChainParams> CreateChainParams(const std::string& chain)
         return std::unique_ptr<CChainParams>(new CTestNetParams());
     else if (chain == CBaseChainParams::REGTEST)
         return std::unique_ptr<CChainParams>(new CRegTestParams());
-	else if (chain == CBaseChainParams::MYNEWNET)
-        return std::unique_ptr<CChainParams>(new CMyNewNetParams());
     throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
 }
 

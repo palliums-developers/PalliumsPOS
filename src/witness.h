@@ -52,6 +52,7 @@ struct IrreversibleBlockInfo{
     }
 };
 
+static std::shared_ptr<const CBlock> most_recent_block;
 
 class DPoS{
 public:
@@ -60,15 +61,13 @@ public:
     static DPoS& GetInstance();
     void Init();
 
-    bool IsMining(DelegateInfo& cDelegateInfo, const std::vector<unsigned char> &vpk, const std::vector<unsigned char> &vsk, time_t t);
+    bool IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& proof, const std::vector<unsigned char> &vpk, const std::vector<unsigned char> &vsk, time_t t);
 
     DelegateInfo GetNextDelegates(std::vector<unsigned char> &vrfValue);
-    bool CheckBlockDelegate(DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo);
-    std::vector<unsigned char> GetVRFValue(VrfInfo &vrfInfo);
+    bool CheckBlockDelegate(DelegateInfo& cDelegateInfo, std::vector<unsigned char> proof);
+    std::vector<unsigned char> GetVRFValue(std::vector<unsigned char> &proof);
     bool CheckBlockHeader(const CBlockHeader& block);
-    bool CheckBlock(const CBlockIndex& blockindex, bool fIsCheckDelegateInfo);
     bool CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo);
-    bool CheckCoinbase(const CTransaction& tx, DelegateInfo& cDelegateInfo, VrfInfo& vrfInfo);
 
     uint64_t GetLoopIndex(uint64_t time);
     uint32_t GetDelegateIndex(uint64_t time);
@@ -77,13 +76,12 @@ public:
     static std::string DelegateToData(const DelegateInfo& cDelegateInfo);
 
     static bool VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInfo, const CScript& script);
-    static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& vrf_pk, const std::vector<unsigned char>& vrf_sk);
+    static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& proof, const std::vector<unsigned char>& vrf_pk, const std::vector<unsigned char>& vrf_sk);
 
     uint64_t GetStartTime() {return nDposStartTime;}
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
 
     int GetMaxMemory() {return nMaxMemory;}
-    CBlock& GetLastBestBlock(){return lastBestblock;}
 
     IrreversibleBlockInfo GetIrreversibleBlockInfo();
     void SetIrreversibleBlockInfo(const IrreversibleBlockInfo& info);
@@ -93,9 +91,8 @@ public:
     bool IsValidBlockCheckIrreversibleBlock(int64_t height, uint256 hash);
     void AddIrreversibleBlock(int64_t height, uint256 hash);
 
-    static bool VerifyVrfProof(CBlockIndex* pBlockIndex, std::vector<unsigned char> &output, const std::vector<unsigned char> &pk, std::vector<unsigned char> &proof);
-    static bool CreateVrfProof(const CBlock& block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
-    static bool CreateVrfProof(CBlockIndex* pBlockIndex, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
+    static bool VerifyVrfProof(const CBlock &block, const std::vector<unsigned char> &pk, std::vector<unsigned char> &proof);
+    static bool CreateVrfProof(const CBlock &block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
     static bool CreateVrfData(const CBlock& block, std::vector<unsigned char>& msg);
 
     const int nFirstIrreversibleThreshold = 90;
@@ -114,7 +111,6 @@ private:
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;
     DelegateInfo cCurrentDelegateInfo;
-    CBlock lastBestblock;
 };
 
 #endif // BITCOIN_WITNESS_H

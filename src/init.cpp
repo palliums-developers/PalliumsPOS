@@ -344,8 +344,6 @@ static void OnRPCStopped()
 void SetupServerArgs()
 {
 	// Uncomment below two lines when mining genesis
-	// const auto BaseParams = CreateBaseChainParams(CBaseChainParams::MYNEWNET);
-	// const auto Params = CreateChainParams(CBaseChainParams::MYNEWNET);
 	
     const auto defaultBaseParams = CreateBaseChainParams(CBaseChainParams::MAIN);
     const auto testnetBaseParams = CreateBaseChainParams(CBaseChainParams::TESTNET);
