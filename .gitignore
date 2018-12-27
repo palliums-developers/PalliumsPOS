@@ -13,6 +13,8 @@ src/qt/test/test_bitcoin-qt
 src/omnicore/tags
 bash/regtest/hosts
 
+Sinnga.creator.user
+
 # autoreconf
 Makefile.in
 aclocal.m4
