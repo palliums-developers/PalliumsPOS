@@ -38,6 +38,8 @@
 
 #include <functional>
 
+#include <selector.h>
+
 static const std::string WALLET_ENDPOINT_BASE = "/wallet/";
 bool GetWalletNameFromJSONRPCRequest(const JSONRPCRequest& request, std::string& wallet_name)
 {
@@ -4080,6 +4082,13 @@ public:
             obj.pushKV("pubkey", HexStr(vchPubKey));
             obj.pushKV("iscompressed", vchPubKey.IsCompressed());
         }
+        CKey key;
+        if (pwallet->GetKey(keyID, key)) {
+            unsigned char pk[32];
+            unsigned char sk[64];
+            Selector::GetInstance().GetVrfKeypairFromPrivKey(pk,sk,key.begin());
+            obj.pushKV("vrfpubkey",  HexStr(pk, pk+32, false));
+        }
         return obj;
     }
 
@@ -4099,6 +4108,13 @@ public:
         CPubKey pubkey;
         if (pwallet && pwallet->GetPubKey(CKeyID(id), pubkey)) {
             obj.pushKV("pubkey", HexStr(pubkey));
+        }
+        CKey key;
+        if (pwallet->GetKey(CKeyID(id), key)) {
+            unsigned char pk[32];
+            unsigned char sk[64];
+            Selector::GetInstance().GetVrfKeypairFromPrivKey(pk,sk,key.begin());
+            obj.pushKV("vrfpubkey",  HexStr(pk, pk+32, false));
         }
         return obj;
     }
@@ -4174,6 +4190,7 @@ UniValue getaddressinfo(const JSONRPCRequest& request)
             "    ]\n"
             "  \"sigsrequired\" : xxxxx        (numeric, optional) Number of signatures required to spend multisig output (only if \"script\" is \"multisig\")\n"
             "  \"pubkey\" : \"publickeyhex\",    (string, optional) The hex value of the raw public key, for single-key addresses (possibly embedded in P2SH or P2WSH)\n"
+            "  \"vrfpubkey\" : \"vrfpublickeyhex\",    (string, optional) The hex value of the vrfpubkey key, for single-key addresses (possibly embedded in P2SH or P2WSH)\n"
             "  \"embedded\" : {...},           (object, optional) Information about the address embedded in P2SH or P2WSH, if relevant and known. It includes all getaddressinfo output fields for the embedded address, excluding metadata (\"timestamp\", \"hdkeypath\", \"hdseedid\") and relation to the wallet (\"ismine\", \"iswatchonly\", \"account\").\n"
             "  \"iscompressed\" : true|false,  (boolean) If the address is compressed\n"
             "  \"label\" :  \"label\"         (string) The label associated with the address, \"\" is the default account\n"

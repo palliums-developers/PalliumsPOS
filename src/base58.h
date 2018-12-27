@@ -14,8 +14,13 @@
 #ifndef BITCOIN_BASE58_H
 #define BITCOIN_BASE58_H
 
+#include "chainparams.h"
 #include <string>
 #include <vector>
+#include "pubkey.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "support/allocators/zeroafterfree.h"
 
 /**
  * Encode a byte sequence as a base58-encoded string.
@@ -57,5 +62,7 @@ bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet);
  * vector (vchRet), return true if decoding is successful
  */
 bool DecodeBase58Check(const std::string& str, std::vector<unsigned char>& vchRet);
+
+
 
 #endif // BITCOIN_BASE58_H

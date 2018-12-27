@@ -40,6 +40,8 @@ src/test/gen
 src/univalue
 src/univalue/include
 src/univalue/lib
+src/vrf
+src/vrf/fe_25_5
 src/wallet
 src/wallet/test
 src/zmq

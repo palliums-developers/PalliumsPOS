@@ -899,13 +899,31 @@ bool ArgsManager::ReadConfigStream(std::istream& stream, std::string& error, boo
     return true;
 }
 
+std::vector<std::string> vWitnessPublickeys;
+
+void ReadWitnessPublickeys()
+{
+    fs::path absolute_path=GetConfigFile("address.conf");
+    fs::ifstream fin(absolute_path);
+    char line[1024]={0};
+    std::string tmp="";
+    while(fin.getline(line, sizeof(line)))
+    {
+        std::stringstream publickey(line);
+        publickey>>tmp;
+        vWitnessPublickeys.push_back(tmp);
+    }
+    fin.clear();
+    fin.close();
+}
+
 bool ArgsManager::ReadConfigFiles(std::string& error, bool ignore_invalid_keys)
 {
     {
         LOCK(cs_args);
         m_config_args.clear();
     }
-
+    ReadWitnessPublickeys();
     const std::string confPath = GetArg("-conf", BITCOIN_CONF_FILENAME);
     fs::ifstream stream(GetConfigFile(confPath));
 
@@ -985,6 +1003,7 @@ std::string ArgsManager::GetChainName() const
         return CBaseChainParams::REGTEST;
     if (fTestNet)
         return CBaseChainParams::TESTNET;
+
     return CBaseChainParams::MAIN;
 }
 
