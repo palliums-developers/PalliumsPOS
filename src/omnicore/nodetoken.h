@@ -30,6 +30,9 @@ public:
 
     static bool IsKeyidRegister(const std::string& keyid); // keyid is Hex string
 
+    static bool IsKeyidRegisterDisk(const std::string& keyid); //# keyid is Hex string
+    std::map<std::string,std::string> GetRegisterNodeTokenerVrfPubkeyDisk(); //# from disk
+
 private:
     uint32_t GetPropertyIdByNodeTokenType(TokenType type);
     void DecodePayload(std::string payload, std::vector<std::string>& veVrfPubkey); // Parase omni paylaod

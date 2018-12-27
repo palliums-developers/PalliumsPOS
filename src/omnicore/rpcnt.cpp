@@ -557,7 +557,7 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
     std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
     std::vector<unsigned char> payload;
-    if(!CNodeToken::IsKeyidRegister(sKeyId)) {
+    if(!CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
         payload = CreatePayload_RegisaterNodeByTx(1, 0, vrfPubkeyNew, sKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already register!");
@@ -633,7 +633,7 @@ UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
     std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
     std::vector<unsigned char> payload;
-    if(CNodeToken::IsKeyidRegister(sKeyId)) {
+    if(CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
         payload = CreatePayload_UnregisaterNodeByTx(1, 0, vrfPubkeyNew, sKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already unregister!");
@@ -678,7 +678,7 @@ UniValue omni_getregisterInfo(const JSONRPCRequest &request)
 
 
    CNodeToken nodeToken;
-   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
    UniValue responseVrfPubkeys(UniValue::VOBJ);
    for(std::map<std::string, std::string>::iterator itr = mapVrfDid.begin();
        itr != mapVrfDid.end(); itr++)

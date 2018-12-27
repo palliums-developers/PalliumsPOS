@@ -741,6 +741,27 @@ void CMPTxList::printAll()
     delete it;
 }
 
+std::vector<uint256> CMPTxList::getTransactionList()
+{
+    std::vector<uint256> vTxId;
+    int count = 0;
+    leveldb::Slice skey, svalue;
+    leveldb::Iterator* it = NewIterator();
+
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        skey = it->key();
+        svalue = it->value();
+        ++count;
+        std::string skeyTemp = skey.ToString();
+        uint256 txhash;
+        txhash.SetHex(skeyTemp);
+        vTxId.emplace_back(txhash);
+    }
+
+    delete it;
+    return vTxId;
+}
+
 // figure out if there was at least 1 Master Protocol transaction within the block range, or a block if starting equals ending
 // block numbers are inclusive
 // pass in bDeleteFound = true to erase each entry found within the block range

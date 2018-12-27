@@ -17,6 +17,7 @@
 #include "omnicore/errors.h"
 #include "omnicore/utilsbitcoin.h"
 #include "omnicore/tx.h"
+#include "omnicore/dbtxlist.h"
 
 #include "nodetoken.h"
 
@@ -24,6 +25,7 @@ using namespace mastercore;
 
 extern std::set<std::pair<std::string,uint32_t> > setFrozenAddresses;
 
+extern CMPTxList* mastercore::p_txlistdb;
 
 class DescribeWalletAddressVisitorNt : public boost::static_visitor<UniValue>
 {
@@ -421,6 +423,104 @@ bool CNodeToken::IsKeyidRegister(const std::string& keyid)
     }
     return IsRegister;
 
+}
+
+bool CNodeToken::IsKeyidRegisterDisk(const std::string &keyid)
+{
+    bool IsRegister = false;
+
+    // next let's obtain the block for this height
+    int64_t nBlockHeight = (int)chainActive.Height();
+    std::vector<uint256> vTxId;
+
+    //#1 get omni transction list
+    if(!p_txlistdb) return false;
+    vTxId = p_txlistdb->getTransactionList();
+
+    //#2 get payload by transaction
+    int64_t nRegisterCount = 0;
+    for(std::vector<uint256>::iterator itr=vTxId.begin(); itr != vTxId.end(); itr++){
+
+        uint256 txHash = *itr;
+        CTransactionRef tx;
+        uint256 blockHash;
+        if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+            continue;
+        }
+
+        int blockTime = 0;
+        int blockHeight = GetHeight();
+        if (!blockHash.IsNull()) {
+            CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+            if (NULL != pBlockIndex) {
+                blockTime = pBlockIndex->nTime;
+                blockHeight = pBlockIndex->nHeight;
+            }
+        }
+
+        //#3 decode payload and get vrfPubkey
+        CMPTransaction mp_obj;
+        int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+        if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+        std::string sPayload = mp_obj.getPayload();
+        if(IsHasKeyRegisterKeyId(sPayload,keyid)) {
+            nRegisterCount++;
+        }
+
+    }
+
+    if (nRegisterCount&0x1) {
+        IsRegister = true;  // ji shu shi, symbol register
+    }
+    else {
+        IsRegister = false; //o shu shi, symbol unregiser
+    }
+    return IsRegister;
+
+}
+
+std::map<std::string, std::string> CNodeToken::GetRegisterNodeTokenerVrfPubkeyDisk()
+{
+    std::map<std::string, std::string> veVrfPubkeyDid;
+
+    //#######////
+    //#1 get omni transction list
+    std::vector<uint256> vTxId;
+    if(p_txlistdb){
+        vTxId = p_txlistdb->getTransactionList();
+    }
+
+    //#2 get payload by transaction
+    int64_t nRegisterCount = 0;
+    for(std::vector<uint256>::iterator itr=vTxId.begin(); itr != vTxId.end(); itr++){
+
+        uint256 txHash = *itr;
+        CTransactionRef tx;
+        uint256 blockHash;
+        if (!GetTransaction(txHash, tx, Params().GetConsensus(), blockHash, true)) {
+            continue;
+        }
+
+        int blockTime = 0;
+        int blockHeight = GetHeight();
+        if (!blockHash.IsNull()) {
+            CBlockIndex* pBlockIndex = GetBlockIndex(blockHash);
+            if (NULL != pBlockIndex) {
+                blockTime = pBlockIndex->nTime;
+                blockHeight = pBlockIndex->nHeight;
+            }
+        }
+
+        //#3 decode payload and get vrfPubkey
+        CMPTransaction mp_obj;
+        int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
+        if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
+        std::string sPayload = mp_obj.getPayload();
+        GetVrfPubkeyDidbyDecodePayload(sPayload, veVrfPubkeyDid);
+
+     }
+    //#######////
+    return veVrfPubkeyDid;
 }
 
 uint32_t CNodeToken::GetPropertyIdByNodeTokenType(TokenType type)

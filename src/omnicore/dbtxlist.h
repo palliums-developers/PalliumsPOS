@@ -53,6 +53,10 @@ public:
     void printStats();
     void printAll();
 
+    //zzl add
+    std::vector<uint256> getTransactionList();
+
+
     bool isMPinBlockRange(int, int, bool);
 };
 

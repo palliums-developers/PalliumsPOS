@@ -22,6 +22,8 @@
 #include <walletinitinterface.h>
 #include "omnicore/utilsui.h"
 
+#include <omnicore/nodetoken.h>
+
 #include <stdio.h>
 
 /* Introduction text for doxygen: */
@@ -188,6 +190,9 @@ int main(int argc, char* argv[])
 
     // Connect bitcoind signal handlers
     noui_connect();
+
+    CNodeToken toke;
+    toke.GetRegisterNodeTokenerVrfPubkeyDisk();
 
     return (AppInit(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
