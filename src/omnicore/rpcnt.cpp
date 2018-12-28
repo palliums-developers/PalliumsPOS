@@ -555,10 +555,11 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
 
     std::string vrfPubkeyH = HexStr(vchPubkey);
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
+    std::vector<char> vech32Test(32,0);
     std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
     std::vector<unsigned char> payload;
     if(!CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
-        payload = CreatePayload_RegisaterNodeByTx(1, 0, vrfPubkeyNew, sKeyId);
+        payload = CreatePayload_RegisaterNodeByTx(1, 0, vech32Test, sKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already register!");
     }
@@ -631,10 +632,11 @@ UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
     std::string vrfPubkey =std::string((const char*)vchPubkey.data());
     std::string vrfPubkeyH = HexStr(vchPubkey);
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
+    std::vector<char> vech32Test(32,0);
     std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
     std::vector<unsigned char> payload;
     if(CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
-        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vrfPubkeyNew, sKeyId);
+        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vech32Test, sKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already unregister!");
     }
@@ -678,17 +680,17 @@ UniValue omni_getregisterInfo(const JSONRPCRequest &request)
 
 
    CNodeToken nodeToken;
-   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
+   std::map<std::vector<char>, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
    UniValue responseVrfPubkeys(UniValue::VOBJ);
-   for(std::map<std::string, std::string>::iterator itr = mapVrfDid.begin();
+   for(std::map<std::vector<char>, std::string>::iterator itr = mapVrfDid.begin();
        itr != mapVrfDid.end(); itr++)
    {
-       std::string sVrfPubkey = itr->first;
+       std::vector<char> sVrfPubkey = itr->first;
        std::string sKeyid = itr->second;
        std::vector<unsigned char> hexvec(&sKeyid[0], &sKeyid[0] + sKeyid.length());
+       std::string sVrfPubkeys = HexStr(sVrfPubkey);
        std::string sHexKeyID = HexStr(hexvec);
-
-       responseVrfPubkeys.push_back(Pair(sVrfPubkey, sHexKeyID));
+       responseVrfPubkeys.push_back(Pair(sVrfPubkeys, sHexKeyID));
    }
    return  responseVrfPubkeys;
 }

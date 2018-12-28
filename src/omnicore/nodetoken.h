@@ -25,7 +25,7 @@ public:
         KeyInfo(){
             nRgtFlag = 0;
         }
-        std::string sVrfPubkey;
+        std::vector<char> sVrfPubkey;
         std::string sKeyID;
         int nRgtFlag; //1,register; 0,unregister;
 
@@ -42,7 +42,7 @@ public:
     static bool IsKeyidRegister(const std::string& keyid); // keyid is Hex string
 
     static bool IsKeyidRegisterDisk(const std::string& keyid); //# keyid is Hex string
-    std::map<std::string,std::string> GetRegisterNodeTokenerVrfPubkeyDisk(); //# from disk
+    std::map<std::vector<char>, std::string>  GetRegisterNodeTokenerVrfPubkeyDisk(); //# from disk
 
 private:
     uint32_t GetPropertyIdByNodeTokenType(TokenType type);
