@@ -20,6 +20,17 @@ public:
 
     };
 
+    struct KeyInfo
+    {
+        KeyInfo(){
+            nRgtFlag = 0;
+        }
+        std::string sVrfPubkey;
+        std::string sKeyID;
+        int nRgtFlag; //1,register; 0,unregister;
+
+    };
+
 
 public:
     std::vector<std::string> GetNodeTokenerPubkey(uint32_t propertyId, CWallet* pwallet);
@@ -37,6 +48,8 @@ private:
     uint32_t GetPropertyIdByNodeTokenType(TokenType type);
     void DecodePayload(std::string payload, std::vector<std::string>& veVrfPubkey); // Parase omni paylaod
     void GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<std::string,std::string>& VrfPubkeyDid); // Parase omni paylaod
+
+    void GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::map<std::string, KeyInfo>& mapKeyInfo); //# Parase omni paylaod
 
     void GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::map<std::string,std::string>& VrfPubkeyDid); // Parase omni paylaod
 
