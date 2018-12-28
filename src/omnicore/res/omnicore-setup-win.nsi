@@ -11,11 +11,11 @@ SetCompressor /SOLID lzma
 !define URL http://www.omnilayer.org/
 
 # MUI Symbol Definitions
-!define MUI_ICON "/home/zhuzhenlong/Sinnga/share/pixmaps/bitcoin.ico"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "/home/zhuzhenlong/Sinnga/share/pixmaps/nsis-wizard.bmp"
+!define MUI_ICON "/root/workdir/Sinnga/share/pixmaps/bitcoin.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "/root/workdir/Sinnga/share/pixmaps/nsis-wizard.bmp"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_HEADERIMAGE_BITMAP "/home/zhuzhenlong/Sinnga/share/pixmaps/nsis-header.bmp"
+!define MUI_HEADERIMAGE_BITMAP "/root/workdir/Sinnga/share/pixmaps/nsis-header.bmp"
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT HKLM
 !define MUI_STARTMENUPAGE_REGISTRY_KEY ${REGKEY}
@@ -23,7 +23,7 @@ SetCompressor /SOLID lzma
 !define MUI_STARTMENUPAGE_DEFAULTFOLDER "Bitcoin Core"
 !define MUI_FINISHPAGE_RUN $INSTDIR\omnicore-qt.exe
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP "/home/zhuzhenlong/Sinnga/share/pixmaps/nsis-wizard.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "/root/workdir/Sinnga/share/pixmaps/nsis-wizard.bmp"
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 # Included files
@@ -49,7 +49,7 @@ Var StartMenuGroup
 !insertmacro MUI_LANGUAGE English
 
 # Installer attributes
-OutFile /home/zhuzhenlong/Sinnga/omnicore-${VERSION}-win-setup.exe
+OutFile /root/workdir/Sinnga/omnicore-${VERSION}-win-setup.exe
 !if "" == "64"
 InstallDir "$PROGRAMFILES64\Omni Core"
 !else
@@ -74,15 +74,15 @@ ShowUninstDetails show
 Section -Main SEC0000
     SetOutPath $INSTDIR
     SetOverwrite on
-    File /home/zhuzhenlong/Sinnga/release/omnicore-qt.exe
-    File /oname=copying.txt /home/zhuzhenlong/Sinnga/src/omnicore/COPYING.md
-    File /oname=readme.txt /home/zhuzhenlong/Sinnga/src/omnicore/README.md
-    File /oname=release-notes.txt /home/zhuzhenlong/Sinnga/src/omnicore/doc/release-notes.md
+    File /root/workdir/Sinnga/release/omnicore-qt.exe
+    File /oname=copying.txt /root/workdir/Sinnga/src/omnicore/COPYING.md
+    File /oname=readme.txt /root/workdir/Sinnga/src/omnicore/README.md
+    File /oname=release-notes.txt /root/workdir/Sinnga/src/omnicore/doc/release-notes.md
     SetOutPath $INSTDIR\daemon
-    File /home/zhuzhenlong/Sinnga/release/omnicored.exe
-    File /home/zhuzhenlong/Sinnga/release/omnicore-cli.exe
+    File /root/workdir/Sinnga/release/omnicored.exe
+    File /root/workdir/Sinnga/release/omnicore-cli.exe
     SetOutPath $INSTDIR\doc
-    File /r /home/zhuzhenlong/Sinnga/src/omnicore/doc\*.*
+    File /r /root/workdir/Sinnga/src/omnicore/doc\*.*
     SetOutPath $INSTDIR
     WriteRegStr HKCU "${REGKEY}\Components" Main 1
 

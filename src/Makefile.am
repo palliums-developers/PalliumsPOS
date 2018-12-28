@@ -202,8 +202,22 @@ BITCOIN_CORE_H = \
   zmq/zmqconfig.h\
   zmq/zmqnotificationinterface.h \
   zmq/zmqpublishnotifier.h \
-  zmq/zmqrpc.h
-
+  zmq/zmqrpc.h \
+  witness.h \
+  vrf/common.h \
+  vrf/convert.h \
+  vrf/crypto_verify_16.h \
+  vrf/crypto_vrf.h \
+  vrf/ed25519_ref10_fe_25_5.h \
+  vrf/ed25519_ref10.h \
+  vrf/randombytes.h \
+  vrf/sha512EL.h \
+  vrf/vrf.h \
+  vrf/base2.h \
+  vrf/base.h \
+  vrf/constants.h \
+  vrf/fe.h \
+  selector.h
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -257,6 +271,17 @@ libbitcoin_server_a_SOURCES = \
   validation.cpp \
   validationinterface.cpp \
   versionbits.cpp \
+  witness.cpp \
+  vrf/convert.cpp \
+  vrf/crypto_verify.cpp \
+  vrf/crypto_vrf.cpp \
+  vrf/ed25519_ref10.cpp \
+  vrf/keypair.cpp \
+  vrf/prove.cpp \
+  vrf/randombytes.cpp \
+  vrf/sha512EL.cpp \
+  vrf/verify.cpp \
+  selector.cpp \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ

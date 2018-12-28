@@ -52,6 +52,8 @@ extern CTranslationInterface translationInterface;
 extern const char * const BITCOIN_CONF_FILENAME;
 extern const char * const BITCOIN_PID_FILENAME;
 
+extern std::vector<std::string> vWitnessPublickeys;
+
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
  * If no translation slot is registered, nothing is returned, and simply return the input.
@@ -381,5 +383,6 @@ inline void insert(std::set<TsetT>& dst, const Tsrc& src) {
 }
 
 } // namespace util
+
 
 #endif // BITCOIN_UTIL_H
