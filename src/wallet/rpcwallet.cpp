@@ -38,7 +38,7 @@
 
 #include <functional>
 
-#include <selector.h>
+#include <vrf/crypto_vrf.h>
 
 static const std::string WALLET_ENDPOINT_BASE = "/wallet/";
 bool GetWalletNameFromJSONRPCRequest(const JSONRPCRequest& request, std::string& wallet_name)
@@ -4086,7 +4086,7 @@ public:
         if (pwallet->GetKey(keyID, key)) {
             unsigned char pk[32];
             unsigned char sk[64];
-            Selector::GetInstance().GetVrfKeypairFromPrivKey(pk,sk,key.begin());
+            crypto_vrf_ietfdraft03_keypair_from_seed(pk,sk,key.begin());
             obj.pushKV("vrfpubkey",  HexStr(pk, pk+32, false));
         }
         return obj;
@@ -4113,7 +4113,7 @@ public:
         if (pwallet->GetKey(CKeyID(id), key)) {
             unsigned char pk[32];
             unsigned char sk[64];
-            Selector::GetInstance().GetVrfKeypairFromPrivKey(pk,sk,key.begin());
+            crypto_vrf_ietfdraft03_keypair_from_seed(pk,sk,key.begin());
             obj.pushKV("vrfpubkey",  HexStr(pk, pk+32, false));
         }
         return obj;

@@ -490,8 +490,6 @@ src/qt/forms/ui_signverifymessagedialog.h
 src/qt/forms/ui_tradehistorydialog.h
 src/qt/forms/ui_transactiondescdialog.h
 src/qt/forms/ui_txhistorydialog.h
-src/qt/forms/ui_signverifymessagedialog.h
-src/qt/forms/ui_transactiondescdialog.h
 src/qt/guiconstants.h
 src/qt/guiutil.cpp
 src/qt/guiutil.h
@@ -513,11 +511,6 @@ src/qt/moc_addressbookpage.cpp
 src/qt/moc_addresstablemodel.cpp
 src/qt/moc_askpassphrasedialog.cpp
 src/qt/moc_balancesdialog.cpp
-src/qt/macdockiconhandler.h
-src/qt/macnotificationhandler.h
-src/qt/moc_addressbookpage.cpp
-src/qt/moc_addresstablemodel.cpp
-src/qt/moc_askpassphrasedialog.cpp
 src/qt/moc_bantablemodel.cpp
 src/qt/moc_bitcoinaddressvalidator.cpp
 src/qt/moc_bitcoinamountfield.cpp
@@ -538,8 +531,6 @@ src/qt/moc_macdockiconhandler.cpp
 src/qt/moc_macnotificationhandler.cpp
 src/qt/moc_metadexcanceldialog.cpp
 src/qt/moc_metadexdialog.cpp
-src/qt/moc_macdockiconhandler.cpp
-src/qt/moc_macnotificationhandler.cpp
 src/qt/moc_modaloverlay.cpp
 src/qt/moc_notificator.cpp
 src/qt/moc_openuridialog.cpp
@@ -560,8 +551,6 @@ src/qt/moc_sendmpdialog.cpp
 src/qt/moc_signverifymessagedialog.cpp
 src/qt/moc_splashscreen.cpp
 src/qt/moc_tradehistorydialog.cpp
-src/qt/moc_signverifymessagedialog.cpp
-src/qt/moc_splashscreen.cpp
 src/qt/moc_trafficgraphwidget.cpp
 src/qt/moc_transactiondesc.cpp
 src/qt/moc_transactiondescdialog.cpp
@@ -981,6 +970,8 @@ src/wallet/walletutil.h
 src/walletinitinterface.h
 src/warnings.cpp
 src/warnings.h
+src/witness.cpp
+src/witness.h
 src/zmq/zmqabstractnotifier.cpp
 src/zmq/zmqabstractnotifier.h
 src/zmq/zmqconfig.h

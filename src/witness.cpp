@@ -1,15 +1,12 @@
 #include "validation.h"
 #include <witness.h>
-#include <base58.h>
-#include <rpc/mining.h>
 #include <policy/policy.h>
 #include <util.h>
+#include <chainparams.h>
 #include <script/script.h>
-#include <wallet/wallet.h>
 #include <vrf/crypto_vrf.h>
+#include "omnicore/nodetoken.h"
 
-
-bool fUseIrreversibleBlock = true;
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
 typedef boost::unique_lock<boost::shared_mutex> write_lock;
@@ -30,7 +27,6 @@ DPoS::~DPoS()
 
 void DPoS::Init()
 {
-    nMaxMemory = gArgs.GetArg("-maxmemory", DEFAULT_MAX_MEMORY_SIZE);
     if(Params().NetworkIDString() == "main") {
         gDPoS.nDposStartTime = 0;
         nMaxDelegateNumber = MAX_DELEGATE_NUM;
@@ -147,7 +143,7 @@ DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> &vrfValue)
 {
     DelegateInfo cDelegateInfo;
 
-    cDelegateInfo.delegates = Selector::GetInstance().GetTopDelegateInfo(nMaxDelegateNumber,vrfValue);
+    cDelegateInfo.delegates = GetTopDelegateInfo(nMaxDelegateNumber,vrfValue);
 
     LogPrintf("DPoS: GetNextDelegates start\n");
     for(auto i : cDelegateInfo.delegates)
@@ -159,6 +155,62 @@ DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> &vrfValue)
     return cDelegateInfo;
 }
 
+std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vector<unsigned char> vrfValue)
+{
+    std::vector<Delegate> result;
+    if(vrfValue == std::vector<unsigned char>(64,0)){
+        for(auto &s:vWitnessPublickeys){
+            std::vector<unsigned char> pk(ParseHex(s));
+            result.push_back(Delegate(pk));
+            if(result.size() >= nDelegateNum) {
+                break;
+            }
+        }
+        return result;
+    }
+    CNodeToken nodeToken;
+    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+    std::vector<std::vector<unsigned char>> delegates;
+    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+    {
+        std::vector<unsigned char> pk(ParseHex(iter->first));
+        delegates.push_back(pk);
+    }
+    sort(delegates.begin(), delegates.end(), [&](const std::vector<unsigned char> &pk1, const std::vector<unsigned char> &pk2)
+    {
+        std::vector<unsigned char> data1(vrfValue.begin(),vrfValue.end());
+        data1.insert(data1.end(),pk1.begin(),pk1.end());
+        std::vector<unsigned char> data2(vrfValue.begin(),vrfValue.end());
+        data2.insert(data2.end(),pk2.begin(),pk2.end());
+        if(Hash160(data1) < Hash160(data2))
+            return true;
+        if(Hash160(data1) == Hash160(data2))
+            return true;
+        return false;
+    }
+    );
+
+    for(auto it = delegates.rbegin(); it != delegates.rend(); ++it)
+    {
+        if(result.size() >= nDelegateNum) {
+            break;
+        }
+        //TODO:vote num auto detect
+        result.push_back(Delegate(*it));
+    }
+    return result;
+}
+
+std::string DPoS::GetDelegate(const std::vector<unsigned char>& vrfpubkey)
+{
+    for(auto &str_vrf_pubkey:vWitnessPublickeys)
+    {
+        std::vector<unsigned char> data(ParseHex(str_vrf_pubkey));
+        if(data==vrfpubkey)
+            return str_vrf_pubkey;
+    }
+    return std::string();
+}
 
 uint64_t DPoS::GetLoopIndex(uint64_t time)
 {
@@ -396,15 +448,8 @@ bool DPoS::IsOnTheSameChain(const std::pair<int64_t, uint256>& first, const std:
     return ret;
 }
 
-IrreversibleBlockInfo DPoS::GetIrreversibleBlockInfo()
-{
-    return cIrreversibleBlockInfo;
-}
 
-void DPoS::SetIrreversibleBlockInfo(const IrreversibleBlockInfo& info)
-{
-    cIrreversibleBlockInfo = info;
-}
+static bool fUseIrreversibleBlock = true;
 
 bool DPoS::ReadIrreversibleBlockInfo(IrreversibleBlockInfo& info)
 {
@@ -550,8 +595,6 @@ void DPoS::AddIrreversibleBlock(int64_t height, uint256 hash)
     }
 
     cIrreversibleBlockInfo.mapHeightHash.insert(std::make_pair(height, hash));
-
-    Selector::GetInstance().DeleteInvalidVote(height);
 }
 
 bool DPoS::VerifyVrfProof(const CBlock &block, const std::vector<unsigned char> &pk, std::vector<unsigned char> &proof)

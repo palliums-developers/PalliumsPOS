@@ -3,17 +3,13 @@
 
 #include <string>
 #include <vector>
-#include <functional>
-#include <fs.h>
+#include <map>
 #include <boost/thread.hpp>
 #include <uint256.h>
-#include <sync.h>
-#include <chain.h>
-#include <key_io.h>
-#include <rpc/server.h>
-#include <selector.h>
 
-extern bool fUseIrreversibleBlock;
+
+class CBlock;
+class CScript;
 
 struct Delegate{
     std::vector<unsigned char> vrfpk;
@@ -33,9 +29,6 @@ struct VrfInfo{
 
 struct DelegateInfo{
     std::vector<Delegate> delegates;
-//    bool operator==(DelegateInfo& cDelegateInfo){
-//        return this->delegates == cDelegateInfo.delegates;
-//    }
 };
 
 const int nMaxConfirmBlockCount = 2;
@@ -72,19 +65,15 @@ public:
     uint64_t GetLoopIndex(uint64_t time);
     uint32_t GetDelegateIndex(uint64_t time);
 
-    static bool DataToDelegate(DelegateInfo& cDelegateInfo, const std::string& data);
-    static std::string DelegateToData(const DelegateInfo& cDelegateInfo);
-
     static bool VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInfo, const CScript& script);
     static CScript VRFDelegateInfoToScript(const DelegateInfo& cDelegateInfo, const std::vector<unsigned char>& proof, const std::vector<unsigned char>& vrf_pk, const std::vector<unsigned char>& vrf_sk);
 
     uint64_t GetStartTime() {return nDposStartTime;}
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
 
-    int GetMaxMemory() {return nMaxMemory;}
+    std::vector<Delegate> GetTopDelegateInfo(uint32_t nDelegateNum, std::vector<unsigned char> vrfValue);
+    std::string GetDelegate(const std::vector<unsigned char>& vrfpubkey);
 
-    IrreversibleBlockInfo GetIrreversibleBlockInfo();
-    void SetIrreversibleBlockInfo(const IrreversibleBlockInfo& info);
     bool ReadIrreversibleBlockInfo(IrreversibleBlockInfo& info);
     bool WriteIrreversibleBlockInfo(const IrreversibleBlockInfo& info);
     void ProcessIrreversibleBlock(int64_t height, uint256 hash);
@@ -102,7 +91,6 @@ private:
     bool IsOnTheSameChain(const std::pair<int64_t, uint256>& first, const std::pair<int64_t, uint256>& second);
 
 private:
-    int nMaxMemory;                    //GB
     int nMaxDelegateNumber;
     int nBlockIntervalTime;            //seconds
     int nLoopRound;
