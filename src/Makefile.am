@@ -216,8 +216,7 @@ BITCOIN_CORE_H = \
   vrf/base2.h \
   vrf/base.h \
   vrf/constants.h \
-  vrf/fe.h \
-  selector.h
+  vrf/fe.h
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -281,7 +280,6 @@ libbitcoin_server_a_SOURCES = \
   vrf/randombytes.cpp \
   vrf/sha512EL.cpp \
   vrf/verify.cpp \
-  selector.cpp \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ

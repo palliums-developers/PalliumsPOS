@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <witness.h>
 #include <wallet/wallet.h>
+#include <vrf/crypto_vrf.h>
 
 unsigned int ParseConfirmTarget(const UniValue& value)
 {
@@ -1002,7 +1003,6 @@ UniValue startforging(const JSONRPCRequest& request)
             "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
             "\nExamples:\n"
             + HelpExampleCli("startforging", "\"0329d5bb92f897564cbc5af9f31def053f015b940d0eea7f014ee42a4ee489d44c\"")
-            + HelpExampleRpc("startforging", "\"0329d5bb92f897564cbc5af9f31def053f015b940d0eea7f014ee42a4ee489d44c\"")
     );
 
     LOCK(cs_mining);
@@ -1025,8 +1025,9 @@ UniValue startforging(const JSONRPCRequest& request)
         }
         vecVrfPK.resize(32);
         vecVrfSK.resize(64);
-        Selector::GetInstance().GetVrfKeypairFromPrivKey(&vecVrfPK[0],&vecVrfSK[0],delegatekey.begin());
-        if(Selector::GetInstance().GetDelegate(vecVrfPK).empty()) {
+        crypto_vrf_ietfdraft03_keypair_from_seed(&vecVrfPK[0],&vecVrfSK[0],delegatekey.begin());
+
+        if(DPoS::GetInstance().GetDelegate(vecVrfPK).empty()) {
             LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
             return "false";
         }
