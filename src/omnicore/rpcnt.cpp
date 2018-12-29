@@ -70,8 +70,8 @@
 #include <univalue.h>
 
 #include <functional>
-//
 
+#include <vrf/crypto_vrf.h>
 
 
 using std::runtime_error;
@@ -548,17 +548,15 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
     if (keyid.IsNull()) {
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
     }
-    CPubKey vchPubkey;
-    if (!pwallet->GetPubKey(keyid, vchPubkey)) {
+
+    CKey key;
+    if (!pwallet->GetKey(keyid, key)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + strAddress + " is not known");
     }
 
-    std::string vrfPubkeyH = HexStr(vchPubkey);
-    std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
-    std::vector<unsigned char> vech32Test;
-
-    vech32Test.insert(vech32Test.end(), reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]),
-    reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]) + 32);
+    std::vector<unsigned char> vrfpk(32,0);
+    std::vector<unsigned char> vrfsk(64,0);
+    crypto_vrf_ietfdraft03_keypair_from_seed(&vrfpk[0],&vrfsk[0],key.begin());
 
     std::vector<unsigned char> vKeyId;
     vKeyId.insert(vKeyId.end(), reinterpret_cast<unsigned char *>(keyid.begin()),
@@ -566,7 +564,7 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
 
     std::vector<unsigned char> payload;
     if(!CNodeToken::IsKeyidRegisterDisk(vKeyId)) {
-        payload = CreatePayload_RegisaterNodeByTx(1, 0, vech32Test, vKeyId);
+        payload = CreatePayload_RegisaterNodeByTx(1, 0, vrfpk, vKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already register!");
     }
@@ -631,25 +629,21 @@ UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
     if (keyid.IsNull()) {
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
     }
-    CPubKey vchPubkey;
-    if (!pwallet->GetPubKey(keyid, vchPubkey)) {
+
+    CKey key;
+    if (!pwallet->GetKey(keyid, key)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + strAddress + " is not known");
     }
-
-    std::string vrfPubkey =std::string((const char*)vchPubkey.data());
-    std::string vrfPubkeyH = HexStr(vchPubkey);
-    std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
-    std::vector<unsigned char> vech32Test;
-
-    vech32Test.insert(vech32Test.end(), reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]),
-    reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]) + 32);
+    std::vector<unsigned char> vrfpk(32,0);
+    std::vector<unsigned char> vrfsk(64,0);
+    crypto_vrf_ietfdraft03_keypair_from_seed(&vrfpk[0],&vrfsk[0],key.begin());
 
     std::vector<unsigned char> vKeyId;
     vKeyId.insert(vKeyId.end(), reinterpret_cast<unsigned char *>(keyid.begin()),
     reinterpret_cast<unsigned char *>(keyid.begin()) + 20);
     std::vector<unsigned char> payload;
     if(CNodeToken::IsKeyidRegisterDisk(vKeyId)) {
-        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vech32Test, vKeyId);
+        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vrfpk, vKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already unregister!");
     }
