@@ -72,7 +72,7 @@ public:
     void SetStartTime(uint64_t t) {nDposStartTime = t;}
 
     std::vector<Delegate> GetTopDelegateInfo(uint32_t nDelegateNum, std::vector<unsigned char> vrfValue);
-    std::string GetDelegate(const std::vector<unsigned char>& vrfpubkey);
+    bool  IsDelegateRegiste(const std::vector<unsigned char>& vrfpubkey);
 
     bool ReadIrreversibleBlockInfo(IrreversibleBlockInfo& info);
     bool WriteIrreversibleBlockInfo(const IrreversibleBlockInfo& info);

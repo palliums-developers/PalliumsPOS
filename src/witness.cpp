@@ -111,9 +111,9 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
 
         LogPrintf("IsMining1: nBlockHeight = %d, blockhash = %s,proof = %s , vrfValue = %s\n",pBlockIndex->nHeight,pBlockIndex->GetBlockHash().ToString(),HexStr(vrfInfo.proof) , HexStr(vrfValue));
         cDelegateInfo = DPoS::GetNextDelegates(vrfValue);
+        cCurrentDelegateInfo = cDelegateInfo;
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
             LogPrintf("IsMining1: true\n");
-            cCurrentDelegateInfo = cDelegateInfo;
             return true;
         } else {
             LogPrintf("IsMining1: false,pk=%s\n", HexStr(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
@@ -159,7 +159,7 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
 {
     std::vector<Delegate> result;
     if(vrfValue == std::vector<unsigned char>(64,0)){
-        for(auto &s:vWitnessPublickeys){
+        for(auto &s:vGenesisMembers){
             std::vector<unsigned char> pk(ParseHex(s));
             result.push_back(Delegate(pk));
             if(result.size() >= nDelegateNum) {
@@ -171,6 +171,13 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
     CNodeToken nodeToken;
     std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
     std::vector<std::vector<unsigned char>> delegates;
+    for(auto &s:vGenesisMembers){
+        std::vector<unsigned char> pk(ParseHex(s));
+        delegates.push_back(pk);
+        if(delegates.size() >= nDelegateNum) {
+            break;
+        }
+    }
     for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
     {
         std::vector<unsigned char> pk(ParseHex(iter->first));
@@ -201,15 +208,26 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
     return result;
 }
 
-std::string DPoS::GetDelegate(const std::vector<unsigned char>& vrfpubkey)
+bool DPoS::IsDelegateRegiste(const std::vector<unsigned char>& vrfpubkey)
 {
-    for(auto &str_vrf_pubkey:vWitnessPublickeys)
-    {
-        std::vector<unsigned char> data(ParseHex(str_vrf_pubkey));
-        if(data==vrfpubkey)
-            return str_vrf_pubkey;
+    CNodeToken nodeToken;
+    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+    std::vector<std::vector<unsigned char>> delegates;
+    for(auto &s:vGenesisMembers){
+        std::vector<unsigned char> pk(ParseHex(s));
+        delegates.push_back(pk);
     }
-    return std::string();
+    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+    {
+        std::vector<unsigned char> pk(ParseHex(iter->first));
+        delegates.push_back(pk);
+    }
+    for(auto &d:delegates)
+    {
+        if(d==vrfpubkey)
+            return true;
+    }
+    return false;
 }
 
 uint64_t DPoS::GetLoopIndex(uint64_t time)
@@ -270,9 +288,7 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
         if(GetScriptOp(it,script.end(), op, &pk) == false) {
             return false;
         }
-
         std::vector<unsigned char> proof;
-
         if(GetScriptOp(it,script.end(), op, &proof) == false) {
             return false;
         }
@@ -284,7 +300,6 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
             pDelegateInfo->delegates.clear();
             if(GetScriptOp(it,script.end(), op, &data)) {
                 if((data.size() - (1)) % (32) == 0) {
-
                     unsigned char* pData = &data[1];
                     uint32_t nDelegateNum = (data.size() - (1)) / (32);
                     for(unsigned int i =0; i < nDelegateNum; ++i) {
@@ -292,7 +307,6 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
                         pDelegateInfo->delegates.push_back(Delegate(vct));
                         pData += 32;
                     }
-
                     return true;
                 }
             }

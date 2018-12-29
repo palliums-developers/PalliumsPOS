@@ -993,50 +993,48 @@ UniValue startforging(const JSONRPCRequest& request)
 
     if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
-            "startforging delegatePublicKey"
-            "\nstart forging on the sinnga publickey which have been registered as delegate"
-            "\nand receivce enough votes and rank in the top 101.\n"
+            "startforging \"address\"\n"
+            "\nstart forging on the sinnga address which have been registered as delegate"
+            "and generate block randomly.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
-            "1. \"delegatePublicKey\"     (string, required) The delegate publickey.\n"
+            "1. \"address\"                    (string, required) The sinnga address to get the information of.\n"
             "\nResult:\n"
             "\"result\"                 (bool) Forging sucess return \"true\", other return \"false\".\n"
             "\nExamples:\n"
-            + HelpExampleCli("startforging", "\"0329d5bb92f897564cbc5af9f31def053f015b940d0eea7f014ee42a4ee489d44c\"")
+            + HelpExampleCli("startforging", "\"2Msf6dE5WJESfSXMAnYuSfSK3trSQKREVZu\"")
+            + HelpExampleCli("startforging", "\"2MsrbnAGgcCRNV4jtAhTxcs7shPx3xefgmb\"")
     );
 
     LOCK(cs_mining);
-    std::string delegatePublicKey;
     if(fIsDelegating == false) {
-        delegatePublicKey=request.params[0].get_str();
-        std::vector<unsigned char> data(ParseHex(delegatePublicKey));
-        CPubKey pubKey(data.begin(), data.end());
-        if (!pubKey.IsFullyValid())
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Publickey is not a valid public key");
-
-        auto delegate = pubKey.GetID();
-        if (delegate.IsNull()) {
-            throw JSONRPCError(RPC_TYPE_ERROR, "Publickey does not refer to a key");
+        CTxDestination dest = DecodeDestination(request.params[0].get_str());
+        // Make sure the destination is valid
+        if (!IsValidDestination(dest)) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
+        }
+        CKeyID key_id = GetKeyForDestination(*pwallet, dest);
+        if (key_id.IsNull()) {
+            throw JSONRPCError(RPC_TYPE_ERROR, "address does not refer to a key");
         }
 
-        if (!pwallet->GetKey(delegate, delegatekey)) {
-            LogPrintf("startforging publickey:%s get private_key fail", request.params[0].get_str());
-            return "false";
+        if (!pwallet->GetKey(key_id, delegatekey)) {
+            LogPrintf("startforging address:%s get private_key fail", request.params[0].get_str());
+            throw JSONRPCError(RPC_TYPE_ERROR, "address get private_key fail");
         }
         vecVrfPK.resize(32);
         vecVrfSK.resize(64);
         crypto_vrf_ietfdraft03_keypair_from_seed(&vecVrfPK[0],&vecVrfSK[0],delegatekey.begin());
 
-        if(DPoS::GetInstance().GetDelegate(vecVrfPK).empty()) {
-            LogPrintf("startforging publickey:%s not registe", request.params[0].get_str());
-            return "false";
+        if(!DPoS::GetInstance().IsDelegateRegiste(vecVrfPK)) {
+            LogPrintf("startforging address:%s not registe", request.params[0].get_str());
+            throw JSONRPCError(RPC_TYPE_ERROR, "startforging address not registe");
         }
 
         fIsDelegating = true;
         pthread_t id;
         pthread_create(&id, nullptr, ThreadDelegating, nullptr);
     }
-
     return "true";
 }
 
