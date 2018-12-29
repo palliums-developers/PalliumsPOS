@@ -25,8 +25,8 @@ public:
         KeyInfo(){
             nRgtFlag = 0;
         }
-        std::vector<char> sVrfPubkey;
-        std::string sKeyID;
+        std::vector<unsigned char> sVrfPubkey;
+        std::vector<unsigned char> sKeyID;
         int nRgtFlag; //1,register; 0,unregister;
 
     };
@@ -41,19 +41,19 @@ public:
 
     static bool IsKeyidRegister(const std::string& keyid); // keyid is Hex string
 
-    static bool IsKeyidRegisterDisk(const std::string& keyid); //# keyid is Hex string
-    std::map<std::vector<char>, std::string>  GetRegisterNodeTokenerVrfPubkeyDisk(); //# from disk
+    static bool IsKeyidRegisterDisk(std::vector<unsigned char>& keyid); //# keyid is Hex string
+    std::map<std::vector<unsigned char>, std::vector<unsigned char>>  GetRegisterNodeTokenerVrfPubkeyDisk(); //# from disk
 
 private:
     uint32_t GetPropertyIdByNodeTokenType(TokenType type);
     void DecodePayload(std::string payload, std::vector<std::string>& veVrfPubkey); // Parase omni paylaod
     void GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<std::string,std::string>& VrfPubkeyDid); // Parase omni paylaod
 
-    void GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::map<std::string, KeyInfo>& mapKeyInfo); //# Parase omni paylaod
+    void GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::map<std::vector<unsigned char>, KeyInfo>& mapKeyInfo); //# Parase omni paylaod
 
     void GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::map<std::string,std::string>& VrfPubkeyDid); // Parase omni paylaod
 
-    static bool IsHasKeyRegisterKeyId(const std::string& payload, const std::string& keyid); //acquire registerd count of keyid
+    static bool IsHasKeyRegisterKeyId(const std::string& payload, std::vector<unsigned char>& keyid); //acquire registerd count of keyid
 private:
     uint32_t propertyId;
 

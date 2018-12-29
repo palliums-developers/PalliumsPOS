@@ -606,7 +606,7 @@ std::vector<unsigned char> CreatePayload_SendNodeToken(uint32_t propertyId, uint
     return payload;
 }
 
-std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::vector<char> vrfpubkey, std::string did)
+std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::vector<unsigned char> vrfpubkey, std::vector<unsigned char> KeyId)
 {
     std::vector<unsigned char> payload;
     uint16_t messageVer = 0;
@@ -618,15 +618,25 @@ std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, 
     SwapByteOrder32(propertyId);
     SwapByteOrder64(amount);
     if (vrfpubkey.size() > 32){
-       std::vector<char> vrfpubkeyTemp = vrfpubkey;
+       std::vector<unsigned char> vrfpubkeyTemp = vrfpubkey;
        vrfpubkey.clear();
-       std::vector<char>::size_type nIndex = 0;
+       std::vector<unsigned char>::size_type nIndex = 0;
         while (nIndex<32) {
             vrfpubkey[nIndex] = vrfpubkeyTemp[nIndex];
             nIndex++;
         }
     }
-    if (did.size() > 255) did = did.substr(0,255);
+
+    if (KeyId.size() > 32){
+       std::vector<unsigned char> KeyIdTemp = KeyId;
+       KeyId.clear();
+       std::vector<unsigned char>::size_type nIndex = 0;
+        while (nIndex<32) {
+            KeyId[nIndex] = KeyIdTemp[nIndex];
+            nIndex++;
+        }
+    }
+
 
     PUSH_BACK_BYTES(payload, messageVer);
     PUSH_BACK_BYTES(payload, messageType);
@@ -634,13 +644,12 @@ std::vector<unsigned char> CreatePayload_RegisaterNodeByTx(uint32_t propertyId, 
     PUSH_BACK_BYTES(payload, amount);
     PUSH_BACK_BYTES(payload, nregisterflag);
     payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
-    payload.insert(payload.end(), did.begin(), did.end());
-    payload.push_back('\0');
+    payload.insert(payload.end(), KeyId.begin(), KeyId.end());
 
     return payload;
 }
 
-std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::vector<char> vrfpubkey, std::string keyid)
+std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId, uint64_t amount, std::vector<unsigned char> vrfpubkey, std::vector<unsigned char> KeyId)
 {
     std::vector<unsigned char> payload;
     uint16_t messageVer = 0;
@@ -652,16 +661,24 @@ std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId
     SwapByteOrder32(propertyId);
     SwapByteOrder64(amount);
     if (vrfpubkey.size() > 32){
-       std::vector<char> vrfpubkeyTemp = vrfpubkey;
+       std::vector<unsigned char> vrfpubkeyTemp = vrfpubkey;
        vrfpubkey.clear();
-       std::vector<char>::size_type nIndex = 0;
+       std::vector<unsigned char>::size_type nIndex = 0;
         while (nIndex<32) {
             vrfpubkey[nIndex] = vrfpubkeyTemp[nIndex];
             nIndex++;
         }
     }
 
-    if (keyid.size() > 255) keyid = keyid.substr(0,255);
+    if (KeyId.size() > 32){
+       std::vector<unsigned char> KeyIdTemp = KeyId;
+       KeyId.clear();
+       std::vector<unsigned char>::size_type nIndex = 0;
+        while (nIndex<32) {
+            KeyId[nIndex] = KeyIdTemp[nIndex];
+            nIndex++;
+        }
+    }
 
     PUSH_BACK_BYTES(payload, messageVer);
     PUSH_BACK_BYTES(payload, messageType);
@@ -669,8 +686,7 @@ std::vector<unsigned char> CreatePayload_UnregisaterNodeByTx(uint32_t propertyId
     PUSH_BACK_BYTES(payload, amount);
     PUSH_BACK_BYTES(payload, nregisterflag);
     payload.insert(payload.end(), vrfpubkey.begin(), vrfpubkey.end());
-    payload.insert(payload.end(), keyid.begin(), keyid.end());
-    payload.push_back('\0');
+    payload.insert(payload.end(), KeyId.begin(), KeyId.end());
 
     return payload;
 }

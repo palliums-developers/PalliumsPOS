@@ -411,9 +411,9 @@ bool CNodeToken::IsKeyidRegister(const std::string& keyid)
         int parseRC = ParseTransaction(*tx, blockHeight, 0, mp_obj, blockTime);
         if (parseRC < 0) PopulateFailure(MP_TX_IS_NOT_MASTER_PROTOCOL);
         std::string sPayload = mp_obj.getPayload();
-        if(IsHasKeyRegisterKeyId(sPayload,keyid)) {
-            nRegisterCount++;
-        }
+//        if(IsHasKeyRegisterKeyId(sPayload,keyid)) {   zzl   unuse
+//            nRegisterCount++;
+//        }
      }
 
     if (nRegisterCount&0x1) {
@@ -426,7 +426,7 @@ bool CNodeToken::IsKeyidRegister(const std::string& keyid)
 
 }
 
-bool CNodeToken::IsKeyidRegisterDisk(const std::string &keyid)
+bool CNodeToken::IsKeyidRegisterDisk(std::vector<unsigned char>& keyid)
 {
     bool IsRegister = false;
 
@@ -480,11 +480,11 @@ bool CNodeToken::IsKeyidRegisterDisk(const std::string &keyid)
 
 }
 
-std::map<std::vector<char>, std::string>  CNodeToken::GetRegisterNodeTokenerVrfPubkeyDisk()
+std::map<std::vector<unsigned char>, std::vector<unsigned char>>  CNodeToken::GetRegisterNodeTokenerVrfPubkeyDisk()
 {
-    std::map<std::vector<char>, std::string>  veVrfPubkeyDid;
+    std::map<std::vector<unsigned char>, std::vector<unsigned char>>  veVrfPubkeyDid;
 
-    std::map<std::string, CNodeToken::KeyInfo> mapVrfKeyInfo;
+    std::map<std::vector<unsigned char>, CNodeToken::KeyInfo> mapVrfKeyInfo;
 
     //#1 get omni transction list
     std::vector<uint256> vTxId;
@@ -522,8 +522,8 @@ std::map<std::vector<char>, std::string>  CNodeToken::GetRegisterNodeTokenerVrfP
 
      }
     //#4 fetch vrfPubkey and keyId info
-    for(std::map<std::string, CNodeToken::KeyInfo>::iterator itr = mapVrfKeyInfo.begin(); itr != mapVrfKeyInfo.end(); itr++)    {
-        std::string sVrfKey = itr->first;
+    for(std::map<std::vector<unsigned char>, CNodeToken::KeyInfo>::iterator itr = mapVrfKeyInfo.begin(); itr != mapVrfKeyInfo.end(); itr++)    {
+        std::vector<unsigned char> sVrfKey = itr->first;
         CNodeToken::KeyInfo& info = itr->second;
         if(info.nRgtFlag == 1)        {
             veVrfPubkeyDid.insert(std::make_pair(info.sVrfPubkey, info.sKeyID));
@@ -661,7 +661,7 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayload(std::string payload, std::map<st
 
 }
 
-void CNodeToken::GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::map<std::string, CNodeToken::KeyInfo> &mapKeyInfo)
+void CNodeToken::GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::map<std::vector<unsigned char>, CNodeToken::KeyInfo> &mapKeyInfo)
 {
     unsigned char vchPayload[255];
     memset(vchPayload,0,255);
@@ -707,19 +707,27 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::ma
     memcpy(&registerflag, &vchPayload[16], 2);
     SwapByteOrder16(registerflag);
 
-    std::vector<char> sVrfPubkey;
-    std::vector<char>::size_type nIndex = 18;
+    std::vector<unsigned char> sVrfPubkey;
+    std::vector<unsigned char>::size_type nIndex = 18;
     while(nIndex < 18 + 32)
     {
-        sVrfPubkey.push_back((char)vchPayload[nIndex]);
+        sVrfPubkey.push_back(vchPayload[nIndex]);
         nIndex++;
+    }
+
+    std::vector<unsigned char> sKeyId;
+    std::vector<unsigned char>::size_type nIndexx = nIndex;
+    while(nIndexx < nIndex + 20)
+    {
+        sKeyId.push_back(vchPayload[nIndexx]);
+        nIndexx++;
     }
 
     const char* pkeyid = nIndex + (char*)&vchPayload[0];
     std::string sKeyid(pkeyid);
 
     // ### todo..
-    std::map<std::string, CNodeToken::KeyInfo>::iterator itr = mapKeyInfo.find(sKeyid);
+    std::map<std::vector<unsigned char>, CNodeToken::KeyInfo>::iterator itr = mapKeyInfo.find(sKeyId);
     if(itr != mapKeyInfo.end()) {
         CNodeToken::KeyInfo& keyInfo =  itr->second;
         if(registerflag == 1) {
@@ -728,14 +736,14 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::ma
         } else if(registerflag == 0) {
              keyInfo.nRgtFlag -=1;
         }
-        mapKeyInfo[sKeyid] = keyInfo;
+        mapKeyInfo[sKeyId] = keyInfo;
 
     } else {
         CNodeToken::KeyInfo Info;
         Info.sVrfPubkey = sVrfPubkey;
-        Info.sKeyID = sKeyid;
+        Info.sKeyID = sKeyId;
         Info.nRgtFlag = registerflag;
-        mapKeyInfo.insert(std::make_pair(sKeyid, Info));
+        mapKeyInfo.insert(std::make_pair(sKeyId, Info));
     }
 
 
@@ -785,7 +793,7 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayloadTest(std::string payload, std::ma
     VrfPubkeyDid.insert(std::make_pair(sVrfPubkey,sDid));
 }
 
-bool CNodeToken::IsHasKeyRegisterKeyId(const std::string& payload, const std::string& keyid)
+bool CNodeToken::IsHasKeyRegisterKeyId(const std::string& payload, std::vector<unsigned char>& keyid)
 {
     bool bRegistetKeyId = false;
 
@@ -830,17 +838,21 @@ bool CNodeToken::IsHasKeyRegisterKeyId(const std::string& payload, const std::st
     memcpy(&registerflag, &vchPayload[16], 2);
     SwapByteOrder16(registerflag);
 
-    std::vector<char> sVrfPubkey;
-    std::vector<char>::size_type nIndex = 18;
+    std::vector<unsigned char> sVrfPubkey;
+    std::vector<unsigned char>::size_type nIndex = 18;
     while(nIndex < 18 + 32) {
-        sVrfPubkey.push_back((char)vchPayload[nIndex]);
+        sVrfPubkey.push_back(vchPayload[nIndex]);
         nIndex++;
     }
 
-    const char* pkeyid = nIndex + (char*)&vchPayload[0];
-    std::string sKeyid(pkeyid);
+    std::vector<unsigned char> vKeyIdTemp;
+    std::vector<unsigned char>::size_type nIndexx = nIndex;
+    while(nIndexx < nIndex + 20) {
+        vKeyIdTemp.push_back(vchPayload[nIndexx]);
+        nIndexx++;
+    }
 
-    if(sKeyid == keyid) {
+    if(vKeyIdTemp == keyid) {
        bRegistetKeyId = true;
     }
 

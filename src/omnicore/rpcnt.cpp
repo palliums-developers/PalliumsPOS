@@ -555,11 +555,18 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
 
     std::string vrfPubkeyH = HexStr(vchPubkey);
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
-    std::vector<char> vech32Test(32,0);
-    std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
+    std::vector<unsigned char> vech32Test;
+
+    vech32Test.insert(vech32Test.end(), reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]),
+    reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]) + 32);
+
+    std::vector<unsigned char> vKeyId;
+    vKeyId.insert(vKeyId.end(), reinterpret_cast<unsigned char *>(keyid.begin()),
+    reinterpret_cast<unsigned char *>(keyid.begin()) + 20);
+
     std::vector<unsigned char> payload;
-    if(!CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
-        payload = CreatePayload_RegisaterNodeByTx(1, 0, vech32Test, sKeyId);
+    if(!CNodeToken::IsKeyidRegisterDisk(vKeyId)) {
+        payload = CreatePayload_RegisaterNodeByTx(1, 0, vech32Test, vKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already register!");
     }
@@ -632,11 +639,17 @@ UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
     std::string vrfPubkey =std::string((const char*)vchPubkey.data());
     std::string vrfPubkeyH = HexStr(vchPubkey);
     std::string vrfPubkeyNew = vrfPubkeyH.substr(0,32);
-    std::vector<char> vech32Test(32,0);
-    std::string sKeyId = std::string((const char*)keyid.begin(), (const char*)keyid.begin()+20);
+    std::vector<unsigned char> vech32Test;
+
+    vech32Test.insert(vech32Test.end(), reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]),
+    reinterpret_cast<unsigned char *>(&vrfPubkeyNew[0]) + 32);
+
+    std::vector<unsigned char> vKeyId;
+    vKeyId.insert(vKeyId.end(), reinterpret_cast<unsigned char *>(keyid.begin()),
+    reinterpret_cast<unsigned char *>(keyid.begin()) + 20);
     std::vector<unsigned char> payload;
-    if(CNodeToken::IsKeyidRegisterDisk(sKeyId)) {
-        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vech32Test, sKeyId);
+    if(CNodeToken::IsKeyidRegisterDisk(vKeyId)) {
+        payload = CreatePayload_UnregisaterNodeByTx(1, 0, vech32Test, vKeyId);
     } else {
         throw JSONRPCError(RPC_TYPE_ERROR, "this address is already unregister!");
     }
@@ -680,16 +693,15 @@ UniValue omni_getregisterInfo(const JSONRPCRequest &request)
 
 
    CNodeToken nodeToken;
-   std::map<std::vector<char>, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
+   std::map<std::vector<unsigned char>, std::vector<unsigned char>> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
    UniValue responseVrfPubkeys(UniValue::VOBJ);
-   for(std::map<std::vector<char>, std::string>::iterator itr = mapVrfDid.begin();
+   for(std::map<std::vector<unsigned char>, std::vector<unsigned char>>::iterator itr = mapVrfDid.begin();
        itr != mapVrfDid.end(); itr++)
    {
-       std::vector<char> sVrfPubkey = itr->first;
-       std::string sKeyid = itr->second;
-       std::vector<unsigned char> hexvec(&sKeyid[0], &sKeyid[0] + sKeyid.length());
-       std::string sVrfPubkeys = HexStr(sVrfPubkey);
-       std::string sHexKeyID = HexStr(hexvec);
+       std::vector<unsigned char> vVrfPubkey = itr->first;
+       std::vector<unsigned char> vKeyid = itr->second;
+       std::string sVrfPubkeys = HexStr(vVrfPubkey);
+       std::string sHexKeyID = HexStr(vKeyid);
        responseVrfPubkeys.push_back(Pair(sVrfPubkeys, sHexKeyID));
    }
    return  responseVrfPubkeys;
