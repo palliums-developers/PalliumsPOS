@@ -742,7 +742,12 @@ void CNodeToken::GetVrfPubkeyDidbyDecodePayloadDisk(std::string payload, std::ma
         CNodeToken::KeyInfo Info;
         Info.sVrfPubkey = sVrfPubkey;
         Info.sKeyID = sKeyId;
-        Info.nRgtFlag = registerflag;
+        if(registerflag == 1) {
+            Info.nRgtFlag +=1;
+
+        } else if(registerflag == 0) {
+             Info.nRgtFlag -=1;
+        }
         mapKeyInfo.insert(std::make_pair(sKeyId, Info));
     }
 
