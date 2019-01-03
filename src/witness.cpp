@@ -1,12 +1,11 @@
-#include "validation.h"
 #include <witness.h>
 #include <policy/policy.h>
 #include <util.h>
 #include <chainparams.h>
 #include <script/script.h>
 #include <vrf/crypto_vrf.h>
-#include "omnicore/nodetoken.h"
-
+#include <validation.h>
+#include <utilstrencodings.h>
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
 typedef boost::unique_lock<boost::shared_mutex> write_lock;
@@ -14,7 +13,6 @@ typedef boost::unique_lock<boost::shared_mutex> write_lock;
 
 static DPoS gDPoS;
 static DPoS *gpDPoS = nullptr;
-
 
 DPoS::~DPoS()
 {
@@ -168,8 +166,8 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
         }
         return result;
     }
-    CNodeToken nodeToken;
-    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+//    CNodeToken nodeToken;
+//    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
     std::vector<std::vector<unsigned char>> delegates;
     for(auto &s:vGenesisMembers){
         std::vector<unsigned char> pk(ParseHex(s));
@@ -178,11 +176,11 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
             break;
         }
     }
-    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
-    {
-        std::vector<unsigned char> pk(ParseHex(iter->first));
-        delegates.push_back(pk);
-    }
+//    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+//    {
+//        std::vector<unsigned char> pk(ParseHex(iter->first));
+//        delegates.push_back(pk);
+//    }
     sort(delegates.begin(), delegates.end(), [&](const std::vector<unsigned char> &pk1, const std::vector<unsigned char> &pk2)
     {
         std::vector<unsigned char> data1(vrfValue.begin(),vrfValue.end());
@@ -210,18 +208,18 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
 
 bool DPoS::IsDelegateRegiste(const std::vector<unsigned char>& vrfpubkey)
 {
-    CNodeToken nodeToken;
-    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
+//    CNodeToken nodeToken;
+//    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
     std::vector<std::vector<unsigned char>> delegates;
     for(auto &s:vGenesisMembers){
         std::vector<unsigned char> pk(ParseHex(s));
         delegates.push_back(pk);
     }
-    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
-    {
-        std::vector<unsigned char> pk(ParseHex(iter->first));
-        delegates.push_back(pk);
-    }
+//    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+//    {
+//        std::vector<unsigned char> pk(ParseHex(iter->first));
+//        delegates.push_back(pk);
+//    }
     for(auto &d:delegates)
     {
         if(d==vrfpubkey)

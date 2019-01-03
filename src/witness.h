@@ -10,6 +10,7 @@
 
 class CBlock;
 class CScript;
+class CBlockHeader;
 
 struct Delegate{
     std::vector<unsigned char> vrfpk;

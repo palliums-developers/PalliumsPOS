@@ -3135,9 +3135,9 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
-//    if(DPoS::GetInstance().CheckBlockHeader(block) == false) {
-//        return state.DoS(50, false, REJECT_INVALID, "time-toolarge", false, "time is error");
-//    }
+    if(DPoS::GetInstance().CheckBlockHeader(block) == false) {
+        return state.DoS(50, false, REJECT_INVALID, "time-toolarge", false, "time is error");
+    }
 
     return true;
 }
@@ -3202,12 +3202,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
 
-//    if( !fImporting && !fReindex && !DPoS::GetInstance().CheckBlock(block, true) ) {
-//        block.fChecked = false;
-//        state.DoS(50, false, REJECT_INVALID, "DPoS CheckBlock hash error");
-//        LogPrintf("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
-//        return error("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
-//    }
+    if( !fImporting && !fReindex && !DPoS::GetInstance().CheckBlock(block, true) ) {
+        block.fChecked = false;
+        state.DoS(50, false, REJECT_INVALID, "DPoS CheckBlock hash error");
+        LogPrintf("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
+        return error("CheckBlock(): DPoS CheckBlock hash: %s error\n", block.GetHash().ToString());
+    }
 
     return true;
 }
@@ -3447,8 +3447,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
             return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
 
-//        if(DPoS::GetInstance().IsValidBlockCheckIrreversibleBlock(pindexPrev->nHeight + 1, block.GetHash()) == false)
-//            return state.Invalid(error("%s: block %s is marked invalid", __func__, hash.ToString()), 0, "IsValidBlockCheckIrreversibleBlock");
+        if(DPoS::GetInstance().IsValidBlockCheckIrreversibleBlock(pindexPrev->nHeight + 1, block.GetHash()) == false)
+            return state.Invalid(error("%s: block %s is marked invalid", __func__, hash.ToString()), 0, "IsValidBlockCheckIrreversibleBlock");
 
         if (!ContextualCheckBlockHeader(block, state, chainparams, pindexPrev, GetAdjustedTime()))
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
