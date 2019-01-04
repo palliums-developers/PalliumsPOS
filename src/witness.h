@@ -8,7 +8,7 @@
 #include <uint256.h>
 
 #define BLOCK_INTERVAL_TIME 3
-#define MAX_DELEGATE_NUM 3
+#define MAX_DELEGATE_NUM 21
 #define LOOP_ROUND 3
 
 class CBlock;
