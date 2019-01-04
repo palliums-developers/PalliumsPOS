@@ -9,7 +9,7 @@
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
 typedef boost::unique_lock<boost::shared_mutex> write_lock;
-
+static std::shared_ptr<const CBlock> most_recent_block;
 
 static DPoS gDPoS;
 static DPoS *gpDPoS = nullptr;

@@ -49,7 +49,6 @@ struct IrreversibleBlockInfo{
     }
 };
 
-static std::shared_ptr<const CBlock> most_recent_block;
 
 class DPoS{
 public:
