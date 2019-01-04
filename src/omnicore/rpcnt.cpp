@@ -87,66 +87,8 @@ extern void omni_GetWalletForJSONRPCRequest(const JSONRPCRequest& request);
 
 UniValue sinnga_sendissuancefixed(const JSONRPCRequest &request)
 {
-
-    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
-    CWallet* const pwallet = wallet.get();
-
-    CNodeToken nodeToken;
-
-    uint32_t nId = 2147483653;
-
-    nodeToken.GetNodeTokenerPubkey(nId, pwallet);
-
-    nodeToken.GetRegisterNodeTokenerVrfPubkey(nId);
-    //test
-    std::string sOP = "Hello,OPReturn!";
-
-    std::vector<unsigned char> payload = {'H','E','L','L','O','O','P','R','T','U','R','N','\0'};
-
-
-    // obtain parameters & info
-    std::string fromAddress = "2NAvgaCpj2V5vdzbtpj1TrQJUuLJFvYjzVr";
-   // uint8_t ecosystem = 2;
-   // uint16_t type = 1;
-    //uint32_t previousId = 0;
-    std::string category = "OPRETURN";
-    std::string subcategory = "LL";
-    std::string name = "PO";
-    std::string url = "";
-    std::string data = "";
-    //int64_t amount = 10;
-
-
-    uint256 txid;
-    std::string rawHex;
-    //WalletTxBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
-
-
-
-//    //code Create a Transaction
-//    CTxDestination txDes = "";
-
-//    CMutableTransaction txNew;
-//    txNew.nVersion = 1;
-//    txNew.vin.resize(1);
-//    txNew.vin[0].prevout.n = 0;
-//    uint256 txHash;
-//    txHash.SetHex("1fe4c25e895bbad6f5dc36471c1dc20d9d30ce55e9562906b440aa84bb27c63d");
-//    txNew.vin[0].prevout.hash = txHash;
-//    txNew.vin[0].scriptSig = GetScriptForDestination("");
-
-
-//    txNew.vout.resize(1);
-//    txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-//    txNew.vout[0].nValue = genesisReward;
-//    txNew.vout[0].scriptPubKey = genesisOutputScript;
-
-
-
-
     return omni_sendissuancefixed(request);
 }
-
 
 static CTransactionRef SendMoneyy(CWallet * const pwallet, const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, const CCoinControl& coin_control, mapValue_t mapValue, std::string fromAccount)
 {
@@ -355,27 +297,7 @@ UniValue omni_registernodetoken(const JSONRPCRequest &request)
 
 UniValue omni_getregisterpubkeys(const JSONRPCRequest &request)
 {
-    CNodeToken nodeToken;
-
-    uint32_t nId = 2147483653;
-
-   std::vector<std::string> vecVrfPubKeys = nodeToken.GetRegisterNodeTokenerVrfPubkey(nId);
-
    UniValue responseVrfPubkeys(UniValue::VOBJ);
-   uint32_t nOrder = 1;
-   for(std::vector<std::string>::iterator itr = vecVrfPubKeys.begin();
-       itr != vecVrfPubKeys.end(); itr++)
-   {
-       std::string sVrfPubkey = *itr;
-       std::string skey("vrfpubkey");
-       char chOrder[4];
-       memset(chOrder, 0, 4);
-       memcpy(chOrder, &nOrder, 4);
-       skey += chOrder;
-       responseVrfPubkeys.push_back(Pair(skey, sVrfPubkey));
-       nOrder++;
-   }
-
    return  responseVrfPubkeys;
 }
 
@@ -796,33 +718,7 @@ UniValue omni_registernodebytxtest(const JSONRPCRequest &request)
 
 UniValue omni_getregisterInfotest(const JSONRPCRequest &request)
 {
-    omni_GetWalletForJSONRPCRequest(request);
-    const UniValue &params = request.params;
-    const bool& fHelp = request.fHelp;
-    if (fHelp || params.size() > 0)
-        throw runtime_error(
-            "omni_getregisterInfo \n"
-            "\nGet registed node info include VrfPubkey and Did\n"
-            "\nWithout Arguments\n"
-            "\nResult:\n"
-            "[                                 (array of JSON objects)\n"
-            " \"vrfpubkey\" : \"did\",                  (string) the hex-encoded hash of the transaction\n"
-            "  ...\n"
-            "]\n"
-            "\nExamples:\n"
-            + HelpExampleCli("omni_getregisterInfo","")
-        );
-
-   CNodeToken nodeToken;
-   std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyTest();
-   UniValue responseVrfPubkeys(UniValue::VOBJ);
-   for(std::map<std::string, std::string>::iterator itr = mapVrfDid.begin();
-       itr != mapVrfDid.end(); itr++)
-   {
-       std::string sVrfPubkey = itr->first;
-       std::string sDid = itr->second;
-       responseVrfPubkeys.push_back(Pair(sVrfPubkey, sDid));
-   }
+    UniValue responseVrfPubkeys(UniValue::VOBJ);
    return  responseVrfPubkeys;
 }
 

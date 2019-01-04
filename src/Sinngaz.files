@@ -281,7 +281,6 @@ noui.cpp
 noui.h
 obj/build.h
 omnicore/NodeToken.cpp
-omnicore/NodeToken.h
 omnicore/activation.cpp
 omnicore/activation.h
 omnicore/consensushash.cpp
