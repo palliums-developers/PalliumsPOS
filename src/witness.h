@@ -85,6 +85,8 @@ public:
     static bool CreateVrfProof(const CBlock &block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
     static bool CreateVrfData(const CBlock& block, std::vector<unsigned char>& msg);
 
+
+
     const int nFirstIrreversibleThreshold = 90;
     const int nSecondIrreversibleThreshold = 67;
     const int nMaxIrreversibleCount = 1000;
@@ -100,6 +102,7 @@ private:
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;
     DelegateInfo cCurrentDelegateInfo;
+    uint64_t nLastDelegateUpdateLoopIndex;
 };
 
 #endif // BITCOIN_WITNESS_H

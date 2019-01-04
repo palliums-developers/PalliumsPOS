@@ -58,7 +58,7 @@ static std::shared_ptr<const CBlock> GetBlock(CBlockIndex *pindex){
     if(!most_recent_block || pindex->GetBlockHash() != most_recent_block->GetHash()){
         std::shared_ptr<CBlock> block_ptr = std::make_shared<CBlock>();
         if(!ReadBlockFromDisk(*block_ptr, pindex, Params().GetConsensus())) {
-            assert(!"cannot load block from disk");
+            LogPrintf("Cannot load block %d from disk", pindex->nHeight);
             return nullptr;
         }
         return block_ptr;
@@ -395,15 +395,17 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
         std::vector<unsigned char> veInit(64,0);
         cDelegateInfo = DPoS::GetNextDelegates(veInit);
         cCurrentDelegateInfo = cDelegateInfo;
+        nLastDelegateUpdateLoopIndex = 0;
     }
     VrfInfo curVrfInfo;
     if(!VRFScriptToDelegateInfo(&cDelegateInfo, &curVrfInfo, block.vtx[0]->vout[1].scriptPubKey)){
         LogPrintf("CheckBlock get curVrfInfo error\n");
         return false;
     }
-    if(cCurrentDelegateInfo.delegates.size() == 0)
-        cCurrentDelegateInfo = cDelegateInfo;
+
     std::shared_ptr<const CBlock> lastblock=GetBlock(pPrevBlockIndex);
+    if(!lastblock)
+        return false;
     if(!VerifyVrfProof(*lastblock, curVrfInfo.pk, curVrfInfo.proof)){
         return false;
     }
@@ -411,6 +413,11 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
     uint32_t nCurrentDelegateIndex = GetDelegateIndex(block.nTime);
 
     uint64_t nPrevLoopIndex = GetLoopIndex(pPrevBlockIndex->nTime);
+
+    if(cCurrentDelegateInfo.delegates.size() == 0 || nLastDelegateUpdateLoopIndex > nCurrentLoopIndex){
+        nLastDelegateUpdateLoopIndex = nCurrentLoopIndex;
+        cCurrentDelegateInfo = cDelegateInfo;
+    }
 
     LogPrintf("CheckBlock: nCurrentLoopIndex %d, nCurrentDelegateIndex %d\n",nCurrentLoopIndex, nCurrentDelegateIndex);
 
@@ -428,6 +435,7 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
             ProcessIrreversibleBlock(nBlockHeight, block.GetHash());
         }
         cCurrentDelegateInfo = cDelegateInfo;
+        nLastDelegateUpdateLoopIndex = nCurrentLoopIndex;
     }
 
     if(nCurrentDelegateIndex < cDelegateInfo.delegates.size() && cDelegateInfo.delegates == cCurrentDelegateInfo.delegates
