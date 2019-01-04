@@ -19,10 +19,6 @@ DPoS::~DPoS()
     WriteIrreversibleBlockInfo(cIrreversibleBlockInfo);
 }
 
-#define BLOCK_INTERVAL_TIME 3
-#define MAX_DELEGATE_NUM 3
-#define LOOP_ROUND 3
-
 void DPoS::Init()
 {
     if(Params().NetworkIDString() == "main") {
