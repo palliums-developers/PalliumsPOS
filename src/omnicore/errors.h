@@ -70,7 +70,7 @@ inline std::string error_str(int ec) {
           ec_str = "Error with wallet object";
           break;
       case MP_ERR_INPUTSELECT_FAIL:
-          ec_str = "Error with selected inputs for the send transaction";
+          ec_str = "Error with selected inputs for the send transaction or fees may not be sufficient";
           break;
       case MP_ERR_CREATE_TX:
           ec_str = "Error creating transaction (wallet may be locked or fees may not be sufficient)";

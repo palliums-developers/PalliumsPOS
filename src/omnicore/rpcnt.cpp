@@ -436,7 +436,7 @@ UniValue omni_registernodebytx(const JSONRPCRequest &request)
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "omni_registernodebytx \"address\" \n"
-            "\nCreate and broadcast a simple send transaction to register node.\n"
+            "\nCreate and broadcast a simple send transaction to register node,the registration fee is 5020 satoshi.\n"
             "\nArguments:\n"
             "1. address          (string, required) the address to register\n"
             "\nResult:\n"
@@ -517,7 +517,7 @@ UniValue omni_unregisternodebytx(const JSONRPCRequest &request)
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "omni_unregisternodebytx \"address\" \n"
-            "\nCreate and broadcast a simple send transaction to register node.\n"
+            "\nCreate and broadcast a simple send transaction to register node,the registration fee is 5020 satoshi.\n"
             "\nArguments:\n"
             "1. address          (string, required) the address to register\n"
             "\nResult:\n"
@@ -596,7 +596,7 @@ UniValue omni_getregisterInfo(const JSONRPCRequest &request)
     if (fHelp || params.size() > 0)
         throw runtime_error(
             "omni_getregisterInfo \n"
-            "\nGet registed node info include VrfPubkey and keyid\n"
+            "\nGet registed node info include VrfPubkey and keyid of pubkey\n"
             "\nWithout Arguments\n"
             "\nResult:\n"
             "[                                 (array of JSON objects)\n"
