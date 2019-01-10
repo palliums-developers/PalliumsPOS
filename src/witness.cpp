@@ -6,6 +6,7 @@
 #include <vrf/crypto_vrf.h>
 #include <validation.h>
 #include <utilstrencodings.h>
+#include "omnicore/nodetoken.h"
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
 typedef boost::unique_lock<boost::shared_mutex> write_lock;
@@ -86,6 +87,10 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
     if(pBlockIndex->nHeight == 0){
         std::vector<unsigned char> veInit(64,0);
         cDelegateInfo = DPoS::GetNextDelegates(veInit);
+        if(cDelegateInfo.delegates.size() < nMaxDelegateNumber){
+            LogPrintf("IsMining: false, delegates number less than the minimum\n");
+            return false;
+        }
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
             LogPrintf("IsMining0: true\n");
             cCurrentDelegateInfo = cDelegateInfo;
@@ -105,6 +110,10 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
 
         LogPrintf("IsMining1: nBlockHeight = %d, blockhash = %s,proof = %s , vrfValue = %s\n",pBlockIndex->nHeight,pBlockIndex->GetBlockHash().ToString(),HexStr(vrfInfo.proof) , HexStr(vrfValue));
         cDelegateInfo = DPoS::GetNextDelegates(vrfValue);
+        if(cDelegateInfo.delegates.size() < nMaxDelegateNumber){
+            LogPrintf("IsMining: false, delegates number less than the minimum\n");
+            return false;
+        }
         cCurrentDelegateInfo = cDelegateInfo;
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
             LogPrintf("IsMining1: true\n");
@@ -113,7 +122,12 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
             LogPrintf("IsMining1: false,pk=%s\n", HexStr(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
             return false;
         }
-    } else if((nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex) || (nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound != 0)) {
+    } else if((nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex) || (nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound != 0)) {       
+        VrfInfo lastVrfInfo;
+        if(!VRFScriptToDelegateInfo(&cCurrentDelegateInfo, &lastVrfInfo, block->vtx[0]->vout[1].scriptPubKey)){
+            LogPrintf("CheckBlock get cCurrentDelegateInfo error\n");
+            return false;
+        }
         if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
             LogPrintf("IsMining2: false\n");
             return false;
@@ -144,8 +158,6 @@ DelegateInfo DPoS::GetNextDelegates(std::vector<unsigned char> &vrfValue)
         LogPrintf("DPoS: delegate %s\n", HexStr(&(*i.vrfpk.begin()),&(*i.vrfpk.end())));
     LogPrintf("DPoS: GetNextDelegates end\n");
 
-    cDelegateInfo.delegates.resize(nMaxDelegateNumber);
-
     return cDelegateInfo;
 }
 
@@ -162,8 +174,6 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
         }
         return result;
     }
-//    CNodeToken nodeToken;
-//    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
     std::vector<std::vector<unsigned char>> delegates;
     for(auto &s:vGenesisMembers){
         std::vector<unsigned char> pk(ParseHex(s));
@@ -172,11 +182,11 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
             break;
         }
     }
-//    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
-//    {
-//        std::vector<unsigned char> pk(ParseHex(iter->first));
-//        delegates.push_back(pk);
-//    }
+    mastercore::CNodeToken nodeToken;
+    std::map<std::vector<unsigned char>, std::vector<unsigned char>> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
+    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+        delegates.push_back(iter->first);
+
     sort(delegates.begin(), delegates.end(), [&](const std::vector<unsigned char> &pk1, const std::vector<unsigned char> &pk2)
     {
         std::vector<unsigned char> data1(vrfValue.begin(),vrfValue.end());
@@ -204,18 +214,17 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
 
 bool DPoS::IsDelegateRegiste(const std::vector<unsigned char>& vrfpubkey)
 {
-//    CNodeToken nodeToken;
-//    std::map<std::string, std::string> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkey();
     std::vector<std::vector<unsigned char>> delegates;
     for(auto &s:vGenesisMembers){
         std::vector<unsigned char> pk(ParseHex(s));
         delegates.push_back(pk);
     }
-//    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
-//    {
-//        std::vector<unsigned char> pk(ParseHex(iter->first));
-//        delegates.push_back(pk);
-//    }
+
+    mastercore::CNodeToken nodeToken;
+    std::map<std::vector<unsigned char>, std::vector<unsigned char>> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
+    for(auto iter=mapVrfDid.begin(); iter!=mapVrfDid.end(); iter++)
+        delegates.push_back(iter->first);
+
     for(auto &d:delegates)
     {
         if(d==vrfpubkey)
@@ -391,7 +400,6 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
         std::vector<unsigned char> veInit(64,0);
         cDelegateInfo = DPoS::GetNextDelegates(veInit);
         cCurrentDelegateInfo = cDelegateInfo;
-        nLastDelegateUpdateLoopIndex = 0;
     }
     VrfInfo curVrfInfo;
     if(!VRFScriptToDelegateInfo(&cDelegateInfo, &curVrfInfo, block.vtx[0]->vout[1].scriptPubKey)){
@@ -410,11 +418,6 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
 
     uint64_t nPrevLoopIndex = GetLoopIndex(pPrevBlockIndex->nTime);
 
-    if(cCurrentDelegateInfo.delegates.size() == 0 || nLastDelegateUpdateLoopIndex > nCurrentLoopIndex){
-        nLastDelegateUpdateLoopIndex = nCurrentLoopIndex;
-        cCurrentDelegateInfo = cDelegateInfo;
-    }
-
     LogPrintf("CheckBlock: nCurrentLoopIndex %d, nCurrentDelegateIndex %d\n",nCurrentLoopIndex, nCurrentDelegateIndex);
 
     if(nBlockHeight > 2 && nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound == 0) {
@@ -431,7 +434,13 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
             ProcessIrreversibleBlock(nBlockHeight, block.GetHash());
         }
         cCurrentDelegateInfo = cDelegateInfo;
-        nLastDelegateUpdateLoopIndex = nCurrentLoopIndex;
+    }
+    else if(cCurrentDelegateInfo.delegates.size() == 0 || cDelegateInfo.delegates != cCurrentDelegateInfo.delegates){
+        VrfInfo lastVrfInfo;
+        if(!VRFScriptToDelegateInfo(&cCurrentDelegateInfo, &lastVrfInfo, lastblock->vtx[0]->vout[1].scriptPubKey)){
+            LogPrintf("CheckBlock get cCurrentDelegateInfo error\n");
+            return false;
+        }
     }
 
     if(nCurrentDelegateIndex < cDelegateInfo.delegates.size() && cDelegateInfo.delegates == cCurrentDelegateInfo.delegates

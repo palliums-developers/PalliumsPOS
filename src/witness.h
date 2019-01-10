@@ -8,7 +8,7 @@
 #include <uint256.h>
 
 #define BLOCK_INTERVAL_TIME 3
-#define MAX_DELEGATE_NUM 21
+#define MAX_DELEGATE_NUM 4
 #define LOOP_ROUND 3
 
 class CBlock;
@@ -104,7 +104,6 @@ private:
     IrreversibleBlockInfo cIrreversibleBlockInfo;
     boost::shared_mutex lockIrreversibleBlockInfo;
     DelegateInfo cCurrentDelegateInfo;
-    uint64_t nLastDelegateUpdateLoopIndex;
 };
 
 #endif // BITCOIN_WITNESS_H
