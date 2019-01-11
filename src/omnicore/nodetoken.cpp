@@ -88,7 +88,7 @@ std::map<std::vector<unsigned char>, std::vector<unsigned char>>  CNodeToken::Ge
     std::map<std::vector<unsigned char>, CNodeToken::KeyInfo> mapVrfKeyInfo;
 
     //#1 get omni transction list
-    LOCK2(cs_main, cs_tally);
+//    LOCK2(cs_main, cs_tally);
     std::vector<uint256> vTxId;
     if(p_txlistdb){
         vTxId = p_txlistdb->getTransactionList();

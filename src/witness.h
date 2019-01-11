@@ -7,8 +7,8 @@
 #include <boost/thread.hpp>
 #include <uint256.h>
 
-#define BLOCK_INTERVAL_TIME 3
-#define MAX_DELEGATE_NUM 4
+#define BLOCK_INTERVAL_TIME 2
+#define MAX_DELEGATE_NUM 3
 #define LOOP_ROUND 3
 
 class CBlock;
@@ -83,9 +83,9 @@ public:
     bool IsValidBlockCheckIrreversibleBlock(int64_t height, uint256 hash);
     void AddIrreversibleBlock(int64_t height, uint256 hash);
 
-    static bool VerifyVrfProof(const CBlock &block, const std::vector<unsigned char> &pk, std::vector<unsigned char> &proof);
-    static bool CreateVrfProof(const CBlock &block, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
-    static bool CreateVrfData(const CBlock& block, std::vector<unsigned char>& msg);
+    static bool VerifyVrfProof(const uint64_t nHeight, const std::vector<unsigned char> &lastproof, const std::vector<unsigned char> &pk, const std::vector<unsigned char> &curproof);
+    static bool CreateVrfProof(const uint64_t nHeight, const std::vector<unsigned char> &lastproof, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
+    static bool CreateVrfData(const uint64_t nHeight, const std::vector<unsigned char> proof, std::vector<unsigned char> &msg);
 
 
 
