@@ -33,7 +33,6 @@ bool CNodeToken::IsKeyidRegisterDisk(std::vector<unsigned char>& keyid)
     bool IsRegister = false;
 
     // next let's obtain the block for this height
-    LOCK2(cs_main, cs_tally);
     std::vector<uint256> vTxId;
 
     //#1 get omni transction list
@@ -88,7 +87,6 @@ std::map<std::vector<unsigned char>, std::vector<unsigned char>>  CNodeToken::Ge
     std::map<std::vector<unsigned char>, CNodeToken::KeyInfo> mapVrfKeyInfo;
 
     //#1 get omni transction list
-    LOCK2(cs_main, cs_tally);
     std::vector<uint256> vTxId;
     if(p_txlistdb){
         vTxId = p_txlistdb->getTransactionList();
