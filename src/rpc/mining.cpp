@@ -971,6 +971,8 @@ void* ThreadDelegating(void *arg)
                     IncrementExtraNonce(&pblock->block, chainActive.Tip(), extraNonce);
                 }
                 std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>(pblock->block);
+                if(!DPoS::CreateBlockSign(blockptr, vecVrfSK))
+                    break;
 
                 if(ProcessNewBlock(Params(), blockptr, true, nullptr) == false) {
                     LogPrintf("ProcessNewBlock failed");

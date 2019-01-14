@@ -82,7 +82,7 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
 
     VrfInfo vLastVrfInfo;
     DelegateInfo cLastBlockDelegateInfo;
-    if(!VRFScriptToDelegateInfo(&cLastBlockDelegateInfo, &vLastVrfInfo, block->vtx[0]->vout[1].scriptPubKey)){
+    if(pBlockIndex->nHeight > 0 && !VRFScriptToDelegateInfo(&cLastBlockDelegateInfo, &vLastVrfInfo, block->vtx[0]->vout[1].scriptPubKey)){
         LogPrintf("IsMining get cLastBlockDelegateInfo error\n");
         return false;
     }
@@ -297,20 +297,26 @@ bool DPoS::VRFScriptToDelegateInfo(DelegateInfo* pDelegateInfo, VrfInfo* pVrfInf
             pVrfInfo->pk=pk;
             pVrfInfo->proof=proof;
         }
-        if(pDelegateInfo){
+        if(pDelegateInfo)
             pDelegateInfo->delegates.clear();
-            if(GetScriptOp(it,script.end(), op, &data)) {
-                if((data.size() - (1)) % (32) == 0) {
-                    unsigned char* pData = &data[1];
-                    uint32_t nDelegateNum = (data.size() - (1)) / (32);
-                    for(unsigned int i =0; i < nDelegateNum; ++i) {
-                        std::vector<unsigned char> vct(pData, pData + 32);
+        if(GetScriptOp(it,script.end(), op, &data)) {
+            if((data.size() - (1)) % (32) == 0) {
+                unsigned char* pData = &data[1];
+                uint32_t nDelegateNum = (data.size() - (1)) / (32);
+                for(unsigned int i =0; i < nDelegateNum; ++i) {
+                    std::vector<unsigned char> vct(pData, pData + 32);
+                    if(pDelegateInfo)
                         pDelegateInfo->delegates.push_back(Delegate(vct));
-                        pData += 32;
-                    }
-                    return true;
+                    pData += 32;
                 }
             }
+        }
+        if(pVrfInfo){
+            std::vector<unsigned char> sign;
+            if(GetScriptOp(it,script.end(), op, &sign) == false) {
+                return false;
+            }
+            pVrfInfo->sign = sign;
         }
     }
     return true;
@@ -411,14 +417,15 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
 
     DelegateInfo cLastDelegateInfo;
     VrfInfo lastVrfInfo;
-    if(!VRFScriptToDelegateInfo(&cLastDelegateInfo, &lastVrfInfo, lastblock->vtx[0]->vout[1].scriptPubKey)){
+    if(nBlockHeight > 1 && !VRFScriptToDelegateInfo(&cLastDelegateInfo, &lastVrfInfo, lastblock->vtx[0]->vout[1].scriptPubKey)){
         LogPrintf("CheckBlock get cCurrentDelegateInfo error\n");
         return false;
     }
 
-//    if(!VerifyVrfProof(pPrevBlockIndex->nHeight, lastVrfInfo.proof, curVrfInfo.pk, curVrfInfo.proof)){
-//        return false;
-//    }
+    if(!VerifyVrfProof(pPrevBlockIndex->nHeight, lastVrfInfo.proof, curVrfInfo.pk, curVrfInfo.proof))
+        return false;
+    if(!VerifyBlockSign(block.GetHash(), curVrfInfo.pk, curVrfInfo.sign))
+        return false;
     uint64_t nCurrentLoopIndex = GetLoopIndex(block.nTime);
     uint32_t nCurrentDelegateIndex = GetDelegateIndex(block.nTime);
 
@@ -442,7 +449,10 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
         cCurrentDelegateInfo = cDelegateInfo;
     }
     else if(cCurrentDelegateInfo.delegates.size() == 0 || cDelegateInfo.delegates != cCurrentDelegateInfo.delegates){
-        cCurrentDelegateInfo = cLastDelegateInfo;
+        if(nBlockHeight == 1)
+            cCurrentDelegateInfo = cDelegateInfo;
+        else
+            cCurrentDelegateInfo = cLastDelegateInfo;
     }
 
     if(nCurrentDelegateIndex < cDelegateInfo.delegates.size() && cDelegateInfo.delegates == cCurrentDelegateInfo.delegates
@@ -648,13 +658,11 @@ bool DPoS::CreateVrfData(const uint64_t nHeight, const std::vector<unsigned char
     }
 
     int64_t height = nHeight + 1;//new block height
-    msg.resize(sizeof(int64_t));
-    memcpy(&msg[0], &height, sizeof(int64_t));
+    msg.assign((unsigned char *)&height, (unsigned char *)&height + sizeof(height));
 
     unsigned char vrfvalue[64];
     crypto_vrf_proof_to_hash(vrfvalue, &proof[0]);
-    msg.resize(msg.size()+ sizeof(vrfvalue));
-    memcpy(&msg[msg.size()], vrfvalue, sizeof(vrfvalue));
+    msg.insert(msg.end(), vrfvalue, vrfvalue + sizeof(vrfvalue));
     return true;
 }
 
@@ -667,7 +675,7 @@ bool DPoS::CreateVrfProof(const uint64_t nHeight, const std::vector<unsigned cha
     }
 
     proof.resize(80);
-    if(crypto_vrf_prove(&proof[0], &vsk[0], (const unsigned char*) &msg[0], msg.size()) != 0){
+    if(crypto_vrf_prove(&proof[0], &vsk[0], &msg[0], msg.size()) != 0){
         LogPrintf("CreateVrfProof: crypto_vrf_prove() error");
         return false;
     }

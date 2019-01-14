@@ -29,6 +29,7 @@ struct Delegate{
 struct VrfInfo{
     std::vector<unsigned char> pk;
     std::vector<unsigned char> proof;
+    std::vector<unsigned char> sign;
 };
 
 struct DelegateInfo{
@@ -86,8 +87,8 @@ public:
     static bool VerifyVrfProof(const uint64_t nHeight, const std::vector<unsigned char> &lastproof, const std::vector<unsigned char> &pk, const std::vector<unsigned char> &curproof);
     static bool CreateVrfProof(const uint64_t nHeight, const std::vector<unsigned char> &lastproof, const std::vector<unsigned char>& vsk, std::vector<unsigned char>& proof);
     static bool CreateVrfData(const uint64_t nHeight, const std::vector<unsigned char> proof, std::vector<unsigned char> &msg);
-
-
+    static bool CreateBlockSign(std::shared_ptr<CBlock> block, const std::vector<unsigned char>& vsk);
+    static bool VerifyBlockSign(const uint256 &&hash, const std::vector<unsigned char> &pk, std::vector<unsigned char> &sign);
 
     const int nFirstIrreversibleThreshold = 90;
     const int nSecondIrreversibleThreshold = 67;
