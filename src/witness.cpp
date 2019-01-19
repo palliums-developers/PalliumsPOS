@@ -6,6 +6,7 @@
 #include <vrf/crypto_vrf.h>
 #include <validation.h>
 #include <utilstrencodings.h>
+#include <consensus/merkle.h>
 #include "omnicore/nodetoken.h"
 
 typedef boost::shared_lock<boost::shared_mutex> read_lock;
@@ -83,12 +84,11 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
     VrfInfo vLastVrfInfo;
     DelegateInfo cLastBlockDelegateInfo;
     if(pBlockIndex->nHeight > 0 && !VRFScriptToDelegateInfo(&cLastBlockDelegateInfo, &vLastVrfInfo, block->vtx[0]->vout[1].scriptPubKey)){
-        LogPrintf("IsMining get cLastBlockDelegateInfo error\n");
+        LogPrintf("IsMining: Get last block delegateinfo error\n");
         return false;
     }
 
     if(!CreateVrfProof(pBlockIndex->nHeight,vLastVrfInfo.proof, vsk, proof)){
-        LogPrintf("CreateVrfProof failed\n", HexStr(proof));
         return false;
     }
 
@@ -100,7 +100,6 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
             return false;
         }
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-            LogPrintf("IsMining0: true\n");
             cCurrentDelegateInfo = cDelegateInfo;
             return true;
         } else {
@@ -110,7 +109,6 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
 
     if(pBlockIndex->nHeight > 1 && nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound == 0) {
         std::vector<unsigned char> vrfValue = GetVRFValue(vLastVrfInfo.proof);
-        LogPrintf("IsMining1: nBlockHeight = %d, blockhash = %s,proof = %s , vrfValue = %s\n",pBlockIndex->nHeight,pBlockIndex->GetBlockHash().ToString(),HexStr(vLastVrfInfo.proof) , HexStr(vrfValue));
         cDelegateInfo = DPoS::GetNextDelegates(vrfValue);
         if(cDelegateInfo.delegates.size() < nMaxDelegateNumber){
             LogPrintf("IsMining: false, delegates number less than the minimum\n");
@@ -118,30 +116,25 @@ bool DPoS::IsMining(DelegateInfo& cDelegateInfo, std::vector<unsigned char>& pro
         }
         cCurrentDelegateInfo = cDelegateInfo;
         if(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-            LogPrintf("IsMining1: true\n");
             return true;
         } else {
-            LogPrintf("IsMining1: false,pk=%s\n", HexStr(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
+            LogPrintf("IsMining: false,pk=%s\n", HexStr(cDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk));
             return false;
         }
     } else if((nCurrentLoopIndex == nPrevLoopIndex && nCurrentDelegateIndex > nPrevDelegateIndex) || (nCurrentLoopIndex > nPrevLoopIndex && nCurrentLoopIndex % nLoopRound != 0)) {       
         cCurrentDelegateInfo = cLastBlockDelegateInfo;
         if(nCurrentDelegateIndex + 1 > cCurrentDelegateInfo.delegates.size()) {
-            LogPrintf("IsMining2: false\n");
+            LogPrintf("IsMining: false, current index value is out of range\n");
             return false;
         } else if(cCurrentDelegateInfo.delegates[nCurrentDelegateIndex].vrfpk == vpk) {
-            LogPrintf("IsMining2: true\n");
             cDelegateInfo = cCurrentDelegateInfo;
             return true;
         } else {
-            LogPrintf("IsMining2: false\n");
+            LogPrintf("IsMining: false, no turn to current node\n");
             return false;
         }
-    } else {
-        LogPrintf("IsMining3: false\n");
-        return false;
     }
-    LogPrintf("IsMining4: false\n");
+    LogPrintf("IsMining: false, unknown error\n");
     return false;
 }
 
@@ -176,9 +169,6 @@ std::vector<Delegate> DPoS::GetTopDelegateInfo(uint32_t nDelegateNum, std::vecto
     for(auto &s:vGenesisMembers){
         std::vector<unsigned char> pk(ParseHex(s));
         delegates.push_back(pk);
-        if(delegates.size() >= nDelegateNum) {
-            break;
-        }
     }
     mastercore::CNodeToken nodeToken;
     std::map<std::vector<unsigned char>, std::vector<unsigned char>> mapVrfDid = nodeToken.GetRegisterNodeTokenerVrfPubkeyDisk();
@@ -424,7 +414,7 @@ bool DPoS::CheckBlock(const CBlock& block, bool fIsCheckDelegateInfo)
 
     if(!VerifyVrfProof(pPrevBlockIndex->nHeight, lastVrfInfo.proof, curVrfInfo.pk, curVrfInfo.proof))
         return false;
-    if(!VerifyBlockSign(block.GetHash(), curVrfInfo.pk, curVrfInfo.sign))
+    if(!VerifyBlockSign(block, curVrfInfo.pk, curVrfInfo.sign))
         return false;
     uint64_t nCurrentLoopIndex = GetLoopIndex(block.nTime);
     uint32_t nCurrentDelegateIndex = GetDelegateIndex(block.nTime);
@@ -682,27 +672,38 @@ bool DPoS::CreateVrfProof(const uint64_t nHeight, const std::vector<unsigned cha
     return true;
 }
 
-
-
-bool DPoS::CreateBlockSign(std::shared_ptr<CBlock> block, const std::vector<unsigned char>& vsk)
+bool DPoS::CreateBlockSign(std::shared_ptr<CBlock> pblock, const std::vector<unsigned char>& vsk)
 {
-    uint256&& hash = block->GetHash();
+    uint256&& hash = pblock->GetHash();
     std::vector<unsigned char> proof(80, 0);
     if(crypto_vrf_prove(&proof[0], &vsk[0], (const unsigned char*) hash.begin(), hash.size()) != 0){
         LogPrintf("CreateBlockSign failed");
         return false;
     }
-    CTxOut &out = const_cast<CTxOut&>(block->vtx[0]->vout[1]);
-    out.scriptPubKey << proof;
+
+    CTransactionRef txCoinbase = pblock->vtx[0];
+    CMutableTransaction tmpTxCoinbase(*txCoinbase);
+    tmpTxCoinbase.vout[1].scriptPubKey << proof;
+    pblock->vtx[0] = MakeTransactionRef(std::move(tmpTxCoinbase));
+    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+
     return true;
 }
 
-bool DPoS::VerifyBlockSign(const uint256 &&hash, const std::vector<unsigned char> &pk, std::vector<unsigned char> &sign)
+bool DPoS::VerifyBlockSign(const CBlock &block, const std::vector<unsigned char> &pk, std::vector<unsigned char> &sign)
 {
+    CBlock tmpblock = block;
+    CTransactionRef txCoinbase = block.vtx[0];
+    CMutableTransaction tmpTxCoinbase(*txCoinbase);
+    tmpTxCoinbase.vout[1].scriptPubKey.resize(tmpTxCoinbase.vout[1].scriptPubKey.size() - 82);
+    tmpblock.vtx[0] = MakeTransactionRef(std::move(tmpTxCoinbase));
+    tmpblock.hashMerkleRoot = BlockMerkleRoot(tmpblock);
+    uint256 hash = tmpblock.GetHash();
     std::vector<unsigned char> output(64,0);
     if (crypto_vrf_verify(&output[0], &pk[0], &sign[0], hash.begin(), hash.size()) != 0){
         LogPrintf("VerifyBlockSign failed\n");
         return false;
     }
+
     return true;
 }

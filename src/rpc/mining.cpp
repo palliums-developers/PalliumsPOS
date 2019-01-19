@@ -940,8 +940,8 @@ static UniValue estimaterawfee(const JSONRPCRequest& request)
 static CCriticalSection cs_mining;
 static bool fIsDelegating = false;
 static CKey delegatekey;
-static std::vector<unsigned char> vecVrfPK;
-static std::vector<unsigned char> vecVrfSK;
+static std::vector<unsigned char> vctVrfPK;
+static std::vector<unsigned char> vctVrfSK;
 
 void* ThreadDelegating(void *arg)
 {
@@ -960,10 +960,10 @@ void* ThreadDelegating(void *arg)
             time_t t = time(nullptr);
             DelegateInfo cDelegateInfo;
             std::vector<unsigned char> proof;
-            if(!dPos.IsMining(cDelegateInfo, proof, vecVrfPK, vecVrfSK, t)){
+            if(!dPos.IsMining(cDelegateInfo, proof, vctVrfPK, vctVrfSK, t)){
                 break;
             }
-            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, proof, vecVrfPK, vecVrfSK), t);
+            std::unique_ptr<CBlockTemplate> pblock = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, DPoS::VRFDelegateInfoToScript(cDelegateInfo, proof, vctVrfPK, vctVrfSK), t);
             if(pblock) {
                 unsigned int extraNonce = 0;
                 {
@@ -971,16 +971,14 @@ void* ThreadDelegating(void *arg)
                     IncrementExtraNonce(&pblock->block, chainActive.Tip(), extraNonce);
                 }
                 std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>(pblock->block);
-                if(!DPoS::CreateBlockSign(blockptr, vecVrfSK))
+                if(!DPoS::CreateBlockSign(blockptr, vctVrfSK))
                     break;
 
                 if(ProcessNewBlock(Params(), blockptr, true, nullptr) == false) {
-                    LogPrintf("ProcessNewBlock failed");
-                    printf("ProcessNewBlock failed\n");
+                    uint64_t nCurrentLoopIndex = dPos.GetLoopIndex(blockptr->nTime);
+                    uint32_t nCurrentDelegateIndex = dPos.GetDelegateIndex(blockptr->nTime);
+                    printf("mining height:%u nCurrentLoopIndex %d nCurrentDelegateIndex %d time:%lu starttime:%lu...\n", chainActive.Height(), nCurrentLoopIndex, nCurrentDelegateIndex, t, DPoS::GetInstance().GetStartTime());
                 }
-                uint64_t nCurrentLoopIndex = dPos.GetLoopIndex(blockptr->nTime);
-                uint32_t nCurrentDelegateIndex = dPos.GetDelegateIndex(blockptr->nTime);
-                printf("mining addr:%s height:%u nCurrentLoopIndex %d nCurrentDelegateIndex %d time:%lu starttime:%lu...\n", EncodeDestination(keyid).c_str(), chainActive.Height(), nCurrentLoopIndex, nCurrentDelegateIndex, t, DPoS::GetInstance().GetStartTime());
             }
         } while(0);
         sleep(1);
@@ -1024,11 +1022,11 @@ UniValue startforging(const JSONRPCRequest& request)
             LogPrintf("startforging address:%s get private_key fail", request.params[0].get_str());
             throw JSONRPCError(RPC_TYPE_ERROR, "address get private_key fail");
         }
-        vecVrfPK.resize(32);
-        vecVrfSK.resize(64);
-        crypto_vrf_ietfdraft03_keypair_from_seed(&vecVrfPK[0],&vecVrfSK[0],delegatekey.begin());
+        vctVrfPK.resize(32);
+        vctVrfSK.resize(64);
+        crypto_vrf_ietfdraft03_keypair_from_seed(&vctVrfPK[0],&vctVrfSK[0],delegatekey.begin());
 
-        if(!DPoS::GetInstance().IsDelegateRegiste(vecVrfPK)) {
+        if(!DPoS::GetInstance().IsDelegateRegiste(vctVrfPK)) {
             LogPrintf("startforging address:%s not registe", request.params[0].get_str());
             throw JSONRPCError(RPC_TYPE_ERROR, "startforging address not registe");
         }
